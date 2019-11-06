@@ -1,0 +1,115 @@
+rem 3D CUBE
+
+open window 640, 512
+
+cubesize = 30
+
+dim pointsx(8), pointsy(8), pointsz(8)
+dim transX(8), transY(8)
+dim poly(6,4), pcol(6, 3)
+
+
+rem INITIALISE POINTS
+
+for i = 1 to 8
+  if i <= 4 then
+    pointsx(i) = -cubesize
+  else
+    pointsx(i) = cubesize
+  fi
+  if mod(int((i-1)/2), 2) = 0 then
+    pointsy(i) = -cubesize
+  else
+    pointsy(i) = cubesize
+  fi
+  if mod(i,2) = 1 then
+    pointsz(i) = -cubesize
+  else
+    pointsz(i) = cubesize
+  fi
+next
+
+
+rem VERTEX CONNECTION DATA
+
+data 3, 1, 5, 7
+data 4, 2, 1, 3
+data 8, 6, 2, 4
+data 7, 5, 6, 8
+data 1, 2, 6, 5
+data 4, 3, 7, 8
+
+for face = 1 to 6
+  for vertex = 1 to 4
+    read poly(face, vertex)
+  next
+next
+
+
+rem FACE COLOUR DATA
+
+data 255, 0, 0
+data 0, 255, 0
+data 0, 0, 255
+data 255, 0, 255
+data 255, 255, 0
+data 0, 255, 255
+
+for face = 1 to 6
+  read pcol(face,1)
+  read pcol(face,2)
+  read pcol(face,3)
+next
+
+curbuffer = 0
+rotateX = 0
+rotateY = 0
+
+label loop
+setdispbuf curbuffer
+curbuffer = 1 - curbuffer
+setdrawbuf curbuffer
+clear window
+
+rotateX = rotateX + 0.02
+rotateY = rotateY + 0.03
+
+cosRotX = cos(rotateX)
+sinRotX = sin(rotateX)
+cosRotY = cos(rotateY)
+sinRotY = sin(rotateY)
+
+
+rem TRANSFORM POINTS
+
+for p = 1 to 8
+  newy = cosRotX*pointsy(p) + sinRotX*pointsz(p)
+  newz = cosRotX*pointsz(p) - sinRotX*pointsy(p)
+
+  newx = cosRotY*pointsx(p) + sinRotY*newz
+  newz = cosRotY*newz - sinRotY*pointsx(p)
+
+  newz = newz + 100
+  transX(p) = 320 + newx * 300 / newz
+  transY(p) = 256 + newy * 300 / newz
+next
+
+
+rem DRAW FACES
+
+for face = 1 to 6
+  rem CALCULATE CROSS PRODUCT for BACKFACE CULLING
+  v1x = transX(poly(face, 1)) - transX(poly(face, 2))
+  v1y = transY(poly(face, 1)) - transY(poly(face, 2))
+  v2x = transX(poly(face, 3)) - transX(poly(face, 2))
+  v2y = transY(poly(face, 3)) - transY(poly(face, 2))
+
+  crossProduct = v1x * v2y - v2x * v1y
+  if crossProduct < 0 then
+    setrgb 1, pcol(face,1), pcol(face,2), pcol(face,3)
+    fill triangle transX(poly(face,1)), transY(poly(face,1)) to transX(poly(face,2)), transY(poly(face,2)) to transX(poly(face,3)), transY(poly(face,3))
+    fill triangle transX(poly(face,3)), transY(poly(face,3)) to transX(poly(face,4)), transY(poly(face,4)) to transX(poly(face,1)), transY(poly(face,1))
+  fi
+next
+
+goto loop

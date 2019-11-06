@@ -1,0 +1,25 @@
+interface:
+    two controllers
+    controller keymap editor
+    version pick option
+
+both versions:
+    a()=a() error
+    text a(),a(),a$(),a$() error
+    symbol dump poke
+    empty window origin
+    empty textalign
+    improve putscreen
+    better array dim memory check
+    check usage of ~~ and numberToInt everywhere
+    correct line number in errors (especially for COMPILE)
+
+yabasic 2.64:
+    arraydim/arraysize bug (fixed in 2.65)
+
+yabasic 2.65
+    COMPILE sometimes randomly crashes
+    EXECUTE sometimes randomly crashes 
+
+yabasic 2.66:
+    negative index MID$ assignment without 3rd argument gives random characters

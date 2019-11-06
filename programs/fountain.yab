@@ -1,0 +1,74 @@
+rem FOUNTAIN
+
+maxDX = 10 : maxHDX = maxDX / 2
+maxDY = 30
+initX = 320 : initY = 0
+numParticles = 200
+gravity = 1
+
+
+rem INITIALISE COLOUR VALUES
+
+dim Colours(numParticles, 3)
+for col = 1 to numParticles
+  Colours(col, 1) = 255
+  Colours(col, 2) = 255
+  Colours(col, 3) = 0
+next
+
+
+rem PARTICLE POSITIONS
+
+dim xy(numParticles, 2)
+for p = 1 to numParticles
+  xy(p,1) = initX
+  xy(p,2) = initY
+next
+
+
+rem INITIAL DX & DY
+
+dim initialdp(numParticles, 2)
+dim dp(numParticles, 2)
+for p = 1 to numParticles
+  dp(p, 1) = ran(maxDX) - maxHDX
+  dp(p, 2) = ran(maxDY)
+
+  initialdp(p, 1) = dp(p, 1)
+  initialdp(p, 2) = dp(p, 2)
+next
+
+open window 640, 512
+curbuff = 0
+
+label fountain
+setdrawbuf curbuff
+curbuff = 1 - curbuff
+setdispbuf curbuff
+
+clear window
+
+for i = 1 to numParticles
+  dp(i, 2) = dp(i, 2) - 1
+  xy(i, 1) = xy(i, 1) + dp(i, 1)
+  xy(i, 2) = xy(i, 2) + dp(i, 2)
+
+  if xy(i, 2) < 0 then
+    dp(i, 1) = initialdp(i, 1)
+    dp(i, 2) = initialdp(i, 2)
+    xy(i, 1) = initX
+    xy(i, 2) = initY
+
+    Colours(i, 2) = 255
+  fi
+
+  if Colours(i, 2) > 4 then
+    Colours(i, 2) = Colours(i, 2) - 5
+  fi
+
+  setrgb 1, Colours(i, 1), Colours(i, 2), Colours(i, 3)
+  dot 640 - xy(i, 1), 512 - xy(i, 2)
+  dot xy(i, 1), 512 - xy(i, 2)
+next
+
+goto fountain

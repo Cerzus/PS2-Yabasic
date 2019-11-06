@@ -1,0 +1,172 @@
+rem 3D BOUNCING BALL
+
+open window 640, 512
+
+sides = 14
+totalPoints = 5 * sides + 2
+totalQuads = 4 * sides
+totalTris = 2 * sides
+
+dim points(totalPoints, 3), t(totalPoints,3)
+dim quads(totalQuads,4), tris(totalTris,3)
+
+size = 30
+bounceAngle = 0
+xs = 3
+originx = 120
+
+rem INITIALISE POINTS
+
+p = 1
+for i = 1 to 5
+  angle = 0
+  a = i * pi / 6
+  radius = sin(a) * size
+  y = cos(a) * size
+  for j = 1 to sides
+    points(p, 1) = sin(angle)*radius
+    points(p, 2) = y
+    points(p, 3) = cos(angle)*radius
+    angle = angle + 2*pi/sides
+    p = p + 1
+  next
+next
+points(p, 1) = 0
+points(p, 2) = -size
+points(p, 3) = 0
+p = p + 1
+points(p, 1) = 0
+points(p, 2) = size
+points(p, 3) = 0
+
+
+rem INITIALISE QUADS
+p = 1
+for i = 1 to 4
+  for j = 1 to sides
+    quads(p, 1) = (i-1) * sides + j
+    quads(p, 2) = i * sides + j
+    quads(p, 3) = i * sides + 1 + mod(j, sides)
+    quads(p, 4) = 1 + (i-1) * sides + mod(j, sides)
+    p = p + 1
+  next
+next
+
+rem INITIALISE TRIS
+p = 1
+for i = 1 to sides
+  tris(p, 1) = 5*sides + 2
+  tris(p, 2) = i
+  tris(p, 3) = 1 + mod(i, sides)
+  p = p + 1
+next
+for i = 1 to sides
+  tris(p, 1) = 4*sides + 1 + mod(i, sides)
+  tris(p, 2) = 4*sides + i
+  tris(p, 3) = 5*sides + 1
+  p = p + 1
+next
+
+
+curbuffer = 0
+rotateX = 0
+rotateY = 0
+
+label loop
+  setdispbuf curbuffer
+  curbuffer = 1 - curbuffer
+  setdrawbuf curbuffer
+  clear window
+
+  setrgb 1, 140, 20, 20
+  setrgb 2, 0, 0, 0
+  setrgb 3, 0, 0, 0
+  gtriangle 0, 512 to 0, 350 to 640, 350
+  setrgb 2, 140, 20, 20
+  gtriangle 0, 512 to 640, 512 to 640, 350
+
+  col = 0
+
+  rotateX = rotateX + 0.02
+  rotateY = rotateY + 0.03
+
+  cosRotX = cos(rotateX)
+  sinRotX = sin(rotateX)
+  cosRotY = cos(rotateY)
+  sinRotY = sin(rotateY)
+
+  originy = 400 - abs(sin(bounceAngle) * 300)
+  originx = originx + xs
+  if originx > 550 or originx < 90 then
+    xs = -xs
+  fi
+  bounceAngle = bounceAngle + 0.06
+
+  rem TRANSFORM POINTS
+
+  for p = 1 to totalPoints
+    newy = cosRotX*points(p,2) + sinRotX*points(p,3)
+    newz = cosRotX*points(p,3) - sinRotX*points(p,2)
+
+    newx = cosRotY*points(p,1) + sinRotY*newz
+    newz = cosRotY*newz - sinRotY*points(p,1)
+
+    newz = newz + 100
+    t(p, 1) = originx + newx * 300 / newz
+    t(p, 2) = originy + newy * 300 / newz
+  next
+
+
+  rem DRAW QUADS
+  col = 0
+  for q = 1 to totalQuads
+    col = 255 - col
+    if mod(q-1, sides) = 0 then
+      col = 255 - col
+    fi
+    p1 = quads(q,1)
+    p2 = quads(q,2)
+    p3 = quads(q,3)
+    p4 = quads(q,4)
+
+    rem CALCULATE CROSS PRODUCT for BACKFACE CULLING
+    v1x = t(p1,1) - t(p2,1)
+    v1y = t(p1,2) - t(p2,2)
+    v2x = t(p3,1) - t(p2,1)
+    v2y = t(p3,2) - t(p2,2)
+    cp = v1x * v2y - v2x * v1y
+    if cp > 0 then
+      light = cp/3000
+      nc = col * light
+      setrgb 1, nc, nc, 255*light
+      fill triangle t(p1,1),t(p1,2) to t(p2,1),t(p2,2) to t(p3,1),t(p3,2)
+      fill triangle t(p1,1),t(p1,2) to t(p4,1),t(p4,2) to t(p3,1),t(p3,2)
+    fi
+  next
+
+  rem DRAW TRIS
+  for q = 1 to totalTris
+    col = 255 - col
+    if q = sides+1 then
+      col = 255 - col
+    fi
+    p1 = tris(q,1)
+    p2 = tris(q,2)
+    p3 = tris(q,3)
+
+    rem CALCULATE CROSS PRODUCT for BACKFACE CULLING
+    v1x = t(p1,1) - t(p2,1)
+    v1y = t(p1,2) - t(p2,2)
+    v2x = t(p3,1) - t(p2,1)
+    v2y = t(p3,2) - t(p2,2)
+    cp = v1x * v2y - v2x * v1y
+    if cp > 0 then
+      light = cp/3000
+      nc = col * light
+      setrgb 1, nc, nc, 255*light
+      fill triangle t(p1,1),t(p1,2) to t(p2,1),t(p2,2) to t(p3,1),t(p3,2)
+    fi
+
+  next
+
+goto loop

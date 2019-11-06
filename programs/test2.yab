@@ -1,0 +1,9 @@
+sub g(c(),c())
+dim c(3)
+end sub
+
+dim a(1), b(1,1)
+a(0)=55
+b(0,0)=88
+g(a(),a())
+?45,a(0),arraysize(a(),1)

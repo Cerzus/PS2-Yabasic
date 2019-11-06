@@ -1,0 +1,43 @@
+rem MANDELBROT SET GENERATOR
+
+xsize = 640 : ysize = 512
+open window xsize, ysize
+
+rmin = -2.0 : rmax = 1.4
+jmin = -1.5 : jmax = 1.4
+
+maxdwell = 50
+
+rinc = (rmax - rmin) / xsize
+jinc = (jmax - jmin) / ysize
+
+j = jmin
+for y = 1 to ysize-1
+  r = rmin
+  for x = 1 to xsize-1
+    oldr = r
+    oldj = j
+    rsq = oldr * oldr
+    jsq = oldj * oldj
+    
+    for dwell = 0 to maxdwell
+      nr = (rsq - jsq) + r
+      nj = (2 * oldr * oldj) + j
+      rsq = nr * nr
+      jsq = nj * nj
+      
+      if (rsq + jsq) > 4.0 then
+        setrgb 1,dwell*13,dwell*9,dwell*7
+        dot x, y
+        dwell = maxdwell
+      fi
+      
+      oldr = nr
+      oldj = nj
+    next
+    
+  r = r + rinc
+  next
+  
+j = j + jinc
+next

@@ -1,0 +1,45 @@
+<html>
+
+<head>
+    <title>yabasic</title>
+
+    <link rel="stylesheet" href="plugins/codemirror.css">
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <div class="textareaWrapper">
+        <textarea id="program" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"
+            disabled></textarea>
+        <div id="parseMessage" class="message disabled">Parser not available.</div>
+        <pre id="output" class="output disabled">Output not available.</pre>
+    </div>
+
+    <script src="https://unpkg.com/jquery@1.12.4/dist/jquery.min.js"></script>
+    <script src="plugins/jsDump.js"></script>
+    <script src="plugins/codemirror.js"></script>
+
+    <script src="strings.js"></script>
+    <script src="AsciiTable.js"></script>
+    <script src="Formatter.js"></script>
+    <script src="TextScreen.js"></script>
+    <script src="GraphicsScreen copy.js"></script>
+    <script src="Input.js"></script>
+
+    <script src="interpreter/Interpreter.js"></script>
+    <script src="interpreter/interpreterUtilityFunctions.js"></script>
+    <script src="interpreter/core.js"></script>
+    <script src="interpreter/expressions.js"></script>
+    <script src="interpreter/arrays.js"></script>
+    <script src="interpreter/stringFunctions.js"></script>
+    <script src="interpreter/numericFunctions.js"></script>
+    <script src="interpreter/booleanFunctions.js"></script>
+    <script src="interpreter/controlFlow.js"></script>
+    <script src="interpreter/io.js"></script>
+    <script src="interpreter/streamIo.js"></script>
+    <script src="interpreter/graphics.js"></script>
+
+    <script src="index.js"></script>
+</body>
+
+</html>

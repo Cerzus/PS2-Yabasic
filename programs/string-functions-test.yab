@@ -1,0 +1,26 @@
+?left$("moi", 1)
+?right$("moi", 1)
+?mid$("moi", 2, 1)
+?str$(123456789123456789)
+?str$(-12345.67890, "##.##")
+?str$(-12345.67890, "%+- 0#10.10f")
+?inkey$
+?inkey$()
+?inkey$(1)
+?chr$(123)
+?upper$("moi")
+?lower$("MOI")
+?ltrim$("   moi   ")+"hoi"
+?rtrim$("   moi   ")+"hoi"
+?trim$("   moi   ")+"hoi"
+?date$
+?time$
+?peek$("moi")
+?peek$("moi", "moi")
+?token$("moi")
+?token$("moi", "moi")
+?split$("moi")
+?split$("moi", "moi")
+?getbit$(1, 1, 1, 1)
+?getscreen$(1, 1, 1, 1)
+?hex$(123456)
