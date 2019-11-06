@@ -21,10 +21,20 @@ class Parser {
             this.data = [];
             this.dataLabels = {};
             this.documentation = [''];
+
+            this.symbolTableStringVariables = [];
+            this.symbolTableNumericVariables = ['numparams', 'PI', 'pi', 'EULER', 'euler'];
+            this.symbolTableStringFunctionsAndArrays = ['docu$'];
+            this.symbolTableNumericFunctionsAndArrays = [];
         }
 
         const abstractSyntaxTree = this.parser.parse(source, {
             version,
+            symbolTableStringVariables: this.symbolTableStringVariables,
+            symbolTableNumericVariables: this.symbolTableNumericVariables,
+            symbolTableStringFunctionsAndArrays: this.symbolTableStringFunctionsAndArrays,
+            symbolTableNumericFunctionsAndArrays: this.symbolTableNumericFunctionsAndArrays,
+
             internalLabels: Object.keys(this.instructionLabels),
             subroutineNames: Object.keys(this.subroutines),
         });
@@ -32,6 +42,11 @@ class Parser {
         if (!compilingAtRuntime) {
             onAbstractSyntaxTreeCreated(abstractSyntaxTree);
         }
+
+        console.log('symbolTableStringVariables', this.symbolTableStringVariables);
+        console.log('symbolTableNumericVariables', this.symbolTableNumericVariables);
+        console.log('symbolTableStringFunctionsAndArrays', this.symbolTableStringFunctionsAndArrays);
+        console.log('symbolTableNumericFunctionsAndArrays', this.symbolTableNumericFunctionsAndArrays);
 
         this.evaluateNode(abstractSyntaxTree);
 

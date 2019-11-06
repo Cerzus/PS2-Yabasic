@@ -79,6 +79,19 @@
         return createNode({ type: "SUBROUTINE_STATEMENT", name, parameters, body });
     }
 
+    function addFunctionOrArrayNameToSymbolTable(name) {
+        if (name.endsWith('$')) {
+            if (options.symbolTableNumericFunctionsAndArrays.indexOf(name) < 0) {
+                options.symbolTableNumericFunctionsAndArrays.push(name);
+            }
+        } else {
+            if (options.symbolTableNumericFunctionsAndArrays.indexOf(name) < 0) {
+                options.symbolTableNumericFunctionsAndArrays.push(name);
+            }
+        }
+        return name;
+    }
+
     function optionalList(value) {
         return value !== null ? value : [];
     }
@@ -134,9 +147,9 @@ CommentedLine
     = ("#" / "'") SourceCharacter*
 
 StringScalarOrArray
-    = id:StringNonArrayIdentifier _ index:Arguments
-        { return createNode({ type: "STRING_ARRAY_MUTATOR", array: id.name, index }); }
-    / StringNonArrayIdentifier
+    = name:StringNonArrayIdentifier _ index:Arguments
+        { return createNode({ type: "STRING_ARRAY_MUTATOR", array: addFunctionOrArrayNameToSymbolTable(name), index }); }
+    / StringVariable
 
 ArrayIdentifier
     = StringArrayIdentifier
@@ -146,19 +159,51 @@ NonArrayIdentifier
     = StringNonArrayIdentifier
     / NumericNonArrayIdentifier
 
+Variable
+    = StringVariable
+    / NumericVariable
+
+_Array
+    = StringArray
+    / NumericArray
+
+StringArray
+    = name:StringArrayIdentifier
+        { return createNode({ type: "STRING_ARRAY", name: addFunctionOrArrayNameToSymbolTable(name) }); }
+
+NumericArray
+    = name:NumericArrayIdentifier
+        { return createNode({ type: "NUMERIC_ARRAY", name: addFunctionOrArrayNameToSymbolTable(name) }); }
+
 StringArrayIdentifier
-    = id:StringNonArrayIdentifier _ "(" _ ")" { return createNode({ type: "STRING_ARRAY", name: id.name }); }
+    = id:StringNonArrayIdentifier _ "(" _ ")" { return id; }
 
 NumericArrayIdentifier
-    = id:NumericNonArrayIdentifier _ "(" _ ")" { return createNode({ type: "NUMERIC_ARRAY", name: id.name }); }
+    = id:NumericNonArrayIdentifier _ "(" _ ")" { return id; }
 
+NumericVariable
+    = name:NumericNonArrayIdentifier
+        {
+            if (options.symbolTableNumericVariables.indexOf(name) < 0) {
+                options.symbolTableNumericVariables.push(name);
+            }
+            return createNode({ type: "NUMERIC_VARIABLE", name }); 
+        }
+
+StringVariable
+    = name:StringNonArrayIdentifier
+        {
+            if (options.symbolTableStringVariables.indexOf(name) < 0) {
+                options.symbolTableStringVariables.push(name);
+            }
+            return createNode({ type: "STRING_VARIABLE", name });
+        }
+        
 NumericNonArrayIdentifier
-    = !ReservedWord id:IdentifierName
-        { return createNode({ type: "NUMERIC_VARIABLE", name: id }); }
+    = !ReservedWord id:IdentifierName { return id; }
 
 StringNonArrayIdentifier
-    = !ReservedWord$ id:$(IdentifierName "$")
-        { return createNode({ type: "STRING_VARIABLE", name: id }); }
+    = !ReservedWord$ id:$(IdentifierName "$") { return id; }
 
 IdentifierName "identifier"
     = $(IdentifierStart IdentifierPart* ("." IdentifierStart IdentifierPart*)?)
@@ -523,10 +568,10 @@ BuiltInNumericExpression
     / OrToken _ "(" _ a:NumericExpression _ "," _ b:NumericExpression _ ")" { return createNode({ type: "OR", a, b }); }
     / EorToken _ "(" _ a:NumericExpression _ "," _ b:NumericExpression _ ")" { return createNode({ type: "EOR", a, b }); }
     / TellToken _ "(" _ stream:HashedNumber _ ")" { return createNode({ type: "TELL", stream }); }
-    / TokenToken _ "(" _ a:StringExpression _ "," _ b:StringArrayIdentifier _ c:("," _ StringExpression _)? ")" { return createNode({ type: "TOKEN", a, b, c: extractOptional(c, 2) }); }
-    / SplitToken _ "(" _ a:StringExpression _ "," _ b:StringArrayIdentifier _ "," _ c:StringExpression _ ")" { return createNode({ type: "SPLIT", a, b, c }); }
-    / ArdimToken _ "(" _ a:ArrayIdentifier _ ")" { return createNode({ type: "ARDIM", a }); }
-    / ArsizeToken _ "(" _ a:ArrayIdentifier _ "," _ b:NumericExpression _ ")" { return createNode({ type: "ARSIZE", a, b }); }
+    / TokenToken _ "(" _ a:StringExpression _ "," _ b:StringArray _ c:("," _ StringExpression _)? ")" { return createNode({ type: "TOKEN", a, b, c: extractOptional(c, 2) }); }
+    / SplitToken _ "(" _ a:StringExpression _ "," _ b:StringArray _ "," _ c:StringExpression _ ")" { return createNode({ type: "SPLIT", a, b, c }); }
+    / ArdimToken _ "(" _ a:_Array _ ")" { return createNode({ type: "ARDIM", a }); }
+    / ArsizeToken _ "(" _ a:_Array _ "," _ b:NumericExpression _ ")" { return createNode({ type: "ARSIZE", a, b }); }
 
 BuiltInStringExpression
     = &{ return options.version >= 2.65; } args:Execute$Clause { return createNode({ type: "EXECUTE$", arguments: args }); }
@@ -564,12 +609,12 @@ FunctionOrArray
     / NumericFunctionOrArray
 
 StringFunctionOrArray
-    = id:StringNonArrayIdentifier _ args:Arguments
-        { return createNode({ type: "STRING_FUNCTION_OR_ARRAY", name: id.name, arguments: args }); }
+    = name:StringNonArrayIdentifier _ args:Arguments
+        { return createNode({ type: "STRING_FUNCTION_OR_ARRAY", name: addFunctionOrArrayNameToSymbolTable(name), arguments: args }); }
 
 NumericFunctionOrArray
-    = id:NumericNonArrayIdentifier _ args:Arguments
-        { return createNode({ type: "NUMERIC_FUNCTION_OR_ARRAY", name: id.name, arguments: args }); }
+    = name:NumericNonArrayIdentifier _ args:Arguments
+        { return createNode({ type: "NUMERIC_FUNCTION_OR_ARRAY", name: addFunctionOrArrayNameToSymbolTable(name), arguments: args }); }
 
 Arguments
     = "(" _ args:ArgumentList? _ ")"
@@ -585,7 +630,7 @@ Argument
 StringPrimaryExpression
     = BuiltInStringExpression
     / StringFunctionOrArray
-    / StringNonArrayIdentifier
+    / StringVariable
     / StringLiteral
     / "(" _ expression:StringExpression _ ")"
         { return expression; }
@@ -594,7 +639,7 @@ NumericPrimaryExpression
     = BuiltInNumericExpression
     / NumericFunctionOrArray
     / Numparams
-    / NumericNonArrayIdentifier
+    / NumericVariable
     / NumericLiteral
     / ParenthesizedNumericExpression
 
@@ -780,11 +825,11 @@ AssignmentStatement
         { return createNode({ type: "ASSIGNMENT_STATEMENT", ...assignment }); }
 
 StringAssignment
-    = left:(StringFunctionOrArray / StringNonArrayIdentifier) _ "=" _ right:StringExpression
+    = left:(StringFunctionOrArray / StringVariable) _ "=" _ right:StringExpression
         { return { left, right }; }
 
 NumericAssignment
-    = left:(NumericFunctionOrArray / Numparams / NumericNonArrayIdentifier) _ "=" _ right:NumericExpression
+    = left:(NumericFunctionOrArray / Numparams / NumericVariable) _ "=" _ right:NumericExpression
         { return { left, right }; }
 
 DocumentationStatement
@@ -840,11 +885,11 @@ IfAlternate
         { return [elsifStatement]; }
 
 ForStatement
-    = ForToken _ variable:(Numparams / NumericNonArrayIdentifier) _ "=" _ start: NumericExpression _
+    = ForToken _ variable:(Numparams / NumericVariable) _ "=" _ start: NumericExpression _
         ToToken _ end:NumericExpression
         step:(_ StepToken _ NumericExpression)?
         body:SourceElements
-        _ NextToken next:(_ (Numparams / NumericNonArrayIdentifier))?
+        _ NextToken next:(_ (Numparams / NumericVariable))?
         {
             next = extractOptional(next, 1);
 
@@ -874,13 +919,13 @@ FunctionDefinitionStatement
         { return createSubroutineStatement(header.name, header.parameters, body); }
 
 SubroutineHeader
-    = (ExportToken _)? SubToken _ id:NonArrayIdentifier _ "(" _ parameters:(ParameterList _)? ")"
+    = (ExportToken _)? SubToken _ name:NonArrayIdentifier _ "(" _ parameters:(ParameterList _)? ")"
         {
             if (isInsideFunction) error(["NestedFunctionsNotAllowed"]);
 
-            isInsideFunction = id.name;
+            isInsideFunction = name;
 
-            return { name: id.name, parameters: optionalList(extractOptional(parameters, 0)) };
+            return { name: addFunctionOrArrayNameToSymbolTable(name), parameters: optionalList(extractOptional(parameters, 0)) };
         }
 
 subroutineEnd
@@ -892,8 +937,8 @@ ParameterList
 
 ParameterItem
     = Numparams
-    / ArrayIdentifier
-    / NonArrayIdentifier
+    / _Array
+    / Variable
 
 FunctionOrArrayStatement
     = statement:FunctionOrArray
@@ -914,7 +959,7 @@ LocalAndStaticList
 LocalAndStaticItem
     = Numparams
     / FunctionOrArray
-    / NonArrayIdentifier
+    / Variable
 
 GotoStatement
     = GotoToken _ label:Label
@@ -1035,7 +1080,7 @@ InputList
         { return buildList(head, tail, 3); }
 
 InputItem
-    = FunctionOrArray / Numparams / NonArrayIdentifier
+    = FunctionOrArray / Numparams / Variable
 
 ReadStatement
     = ReadToken _ variables:ReadList
@@ -1046,7 +1091,7 @@ ReadList
         { return buildList(head, tail, 3); }
 
 ReadItem
-    = FunctionOrArray / Numparams / NonArrayIdentifier
+    = FunctionOrArray / Numparams / Variable
 
 DataStatement
     = DataToken _ head:DataItem tail:(_ "," _ DataItem)*
@@ -1075,8 +1120,8 @@ ArrayDimensionsStatement
         { return createNode({ type: "ARRAY_DIMENSIONS_STATEMENT", arrays: buildList(head, tail, 3) }); }
 
 ArrayDimensionsItem
-    = id:NonArrayIdentifier _ dimensions:Arguments
-        { return { name: id.name, dimensions }; }
+    = name:NonArrayIdentifier _ dimensions:Arguments
+        { return { name: addFunctionOrArrayNameToSymbolTable(name), dimensions }; }
 
 OpenWindowStatement
     = OpenToken _ WindowToken _ width:NumericExpression _ "," _ height:NumericExpression font:(_ "," _ StringExpression)?
