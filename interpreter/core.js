@@ -45,12 +45,13 @@ Interpreter.prototype.instructionLOAD_STRING_VARIABLE = function (variableName) 
     // }
 
     // this.pushString(this.variables[variableName]);
-    let string = this.symbolStack.getStringVariableStore(variableName)[variableName];
+    const store = this.symbolStack.getStringVariableStore(variableName);
+    let string = store[variableName];
 
     if (string === undefined) {
         string = '';
 
-        this.symbolStack.getStringVariableStore(variableName)[variableName] = string;
+        store[variableName] = string;
     }
 
     this.pushString(string);

@@ -377,21 +377,24 @@ class Interpreter {
         let running = this.programCounter < this.instructions.length;
         this.endFrame = false;
 
+        const instructions = this.instructions;
+        const programLength = instructions.length;
+        const maxInstructionsPerFrame = this.maxInstructionsPerFrame;
+
         try {
             let n = 0;
-            const ins = 'instruction';
             do {
                 // run a maximum of ten instructions before checking if enough time has passed to take a break
                 for (let i = 0; i < 10000000000 && !this.endFrame && running; i++) {
-                    const instruction = this.instructions[this.programCounter++];
+                    const instruction = instructions[this.programCounter++];
 
-                    this[ins + instruction[1]](...instruction.slice(2));
+                    this[instruction.type](...instruction.arguments);
 
-                    running = this.programCounter < this.instructions.length && !this.errorsFound;
+                    running = this.programCounter < programLength && !this.errorsFound;
                 }
                 n++;
             }
-            while (!this.endFrame && running && (Date.now() < endOfAllowedRunTime) && n < this.maxInstructionsPerFrame);
+            while (!this.endFrame && running && (Date.now() < endOfAllowedRunTime) && n < maxInstructionsPerFrame);
         } catch (e) {
             if (e.constructor !== YabasicRuntimeError) {
                 throw e;
@@ -421,7 +424,8 @@ class Interpreter {
         }
         else if (running) {
             this.requestFrame(endOfFrameTime - Date.now());
-        } else {console.log(Date.now()-this.programStartedTime)
+        } else {
+            console.log(Date.now() - this.programStartedTime)
             this.stop();
             this.showMessage(this.strings.get('ExecutionComplete'), this.strings.get('ProgramCompletedExecution'));
         }
