@@ -80,15 +80,10 @@
     }
 
     function addFunctionOrArrayNameToSymbolTable(name) {
-        if (name.endsWith('$')) {
-            if (options.symbolTable.stringFunctionsAndArrays.indexOf(name) < 0) {
-                options.symbolTable.stringFunctionsAndArrays.push(name);
-            }
-        } else {
-            if (options.symbolTable.numericFunctionsAndArrays.indexOf(name) < 0) {
-                options.symbolTable.numericFunctionsAndArrays.push(name);
-            }
+        if (options.symbolTable.subroutinesAndArrays.indexOf(name) < 0) {
+            options.symbolTable.subroutinesAndArrays.push(name);
         }
+
         return name;
     }
 

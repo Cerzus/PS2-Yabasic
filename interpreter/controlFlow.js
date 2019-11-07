@@ -131,18 +131,14 @@ Interpreter.prototype.instructionCALL_FUNCTION = function (name, numArguments) {
         subroutineName: this.subroutineName,
         // this array contains objects containing arrays, any problems with references?
         arrayReferenceParameters: this.arrayReferenceParameters.slice(),
-        // localVariables: this.localVariables.slice(),
-        staticVariables: this.staticVariables.slice(),
         localArrays: this.localArrays.slice(),
         staticArrays: this.staticArrays.slice(),
         programCounter: this.programCounter,
     });
-    this.symbolStack.pushStackFrame();
+    this.symbolStack.pushStackFrame(name);
 
     this.subroutineName = name;
     this.arrayReferenceParameters = [];
-    // this.localVariables = [];
-    this.staticVariables = [];
     this.localArrays = [];
     this.staticArrays = [];
 
@@ -183,11 +179,7 @@ Interpreter.prototype.instructionRETURN = function (hasReturnValue) {
             }
         }
 
-        // delete all local variables and arrays
-        // for (let name of this.localVariables) {
-        //     delete this.variables[this.scopeVariableName(name)];
-        // }
-
+        // delete all local arrays
         for (let name of this.localArrays) {
             delete this.arrays[this.scopeArrayName(name)];
         }
@@ -197,8 +189,6 @@ Interpreter.prototype.instructionRETURN = function (hasReturnValue) {
 
         this.subroutineName = context.subroutineName;
         this.arrayReferenceParameters = context.arrayReferenceParameters;
-        // this.localVariables = context.localVariables;
-        this.staticVariables = context.staticVariables;
         this.localArrays = context.localArrays;
         this.staticArrays = context.staticArrays;
 
@@ -247,14 +237,6 @@ Interpreter.prototype.instructionSTATIC_ARRAY = function (arrayName, numDimensio
     }
 };
 
-// Interpreter.prototype.instructionLOCAL_VARIABLE = function (variableName) {
-//     if (this.localVariables.indexOf(variableName) >= 0 || this.staticVariables.indexOf(variableName) >= 0) {
-//         this.throwError('AlreadyDefinedWithinSub', variableName);
-//     }
-
-//     this.localVariables.push(variableName);
-// };
-
 Interpreter.prototype.instructionLOCAL_STRING_VARIABLE = function (variableName) {
     if (this.symbolStack.stringVariablesScope[variableName]) {
         this.throwError('AlreadyDefinedWithinSub', this.symbolStack.symbolTable.stringVariables[variableName]);
@@ -271,13 +253,12 @@ Interpreter.prototype.instructionLOCAL_NUMERIC_VARIABLE = function (variableName
     this.symbolStack.numericVariablesScope[variableName] = 1;
 };
 
-Interpreter.prototype.instructionSTATIC_VARIABLE = function (variableName) {
-    if (this.staticVariables.indexOf(variableName) < 0) {
-        delete this.variables[this.scopeVariableName(variableName)];
-        this.localVariables = this.localVariables.filter(x => x !== variableName);
+Interpreter.prototype.instructionSTATIC_STRING_VARIABLE = function (variableName) {
+    this.symbolStack.stringVariablesScope[variableName] = 2;
+};
 
-        this.staticVariables.push(variableName);
-    }
+Interpreter.prototype.instructionSTATIC_NUMERIC_VARIABLE = function (variableName) {
+    this.symbolStack.numericVariablesScope[variableName] = 2;
 };
 
 Interpreter.prototype.instructionFOR_CONDITIONAL_EXIT = function (variableName, destination) {
@@ -285,16 +266,13 @@ Interpreter.prototype.instructionFOR_CONDITIONAL_EXIT = function (variableName, 
     const end = this.popNumber();
     const start = this.popNumber();
 
-    // variableName = this.scopeVariableName(variableName);
-    // this.variables[variableName] = start;
-    // const variable = this.variables[variableName];
     this.symbolStack.getNumericVariableStore(variableName)[variableName] = start;
 
-    if ((step > 0 && start <= end) || (step < 0 && start >= end) || (step === 0)) {
-        // continue loop
-    } else {
+    if (!((step > 0 && start <= end) || (step < 0 && start >= end) || (step === 0))) {
         this.programCounter = destination; // exit loop
     }
+
+    // continue loop
 };
 
 Interpreter.prototype.instructionFOR_CONDITIONAL_CONTINUE = function (variableName, destination) {
@@ -302,18 +280,11 @@ Interpreter.prototype.instructionFOR_CONDITIONAL_CONTINUE = function (variableNa
     const end = this.popNumber();
     const start = this.popNumber();
 
-    // variableName = this.scopeVariableName(variableName);
-    // this.variables[variableName] += step;
-    // const variable = this.variables[variableName];
     const variable = this.symbolStack.getNumericVariableStore(variableName)[variableName] += step;
 
-    if (step > 0 && variable >= start && variable <= end) {
+    if ((step > 0 && variable >= start && variable <= end) || (step < 0 && variable >= end && variable <= start) || (step === 0)) {
         this.programCounter = destination; // continue loop
-    } else if (step < 0 && variable >= end && variable <= start) {
-        this.programCounter = destination; // continue loop
-    } else if (step === 0) {
-        this.programCounter = destination; // continue loop
-    } else {
-        // exit loop
     }
+
+    // exit loop
 };

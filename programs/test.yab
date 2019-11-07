@@ -1,13 +1,11 @@
-for b=0 to 20000
-a=a:a=a:a=a:a=a:a=a:a=a:a=a:a=a:a=a:a=a
-a=a:a=a:a=a:a=a:a=a:a=a:a=a:a=a:a=a:a=a
-a=a:a=a:a=a:a=a:a=a:a=a:a=a:a=a:a=a:a=a
-a=a:a=a:a=a:a=a:a=a:a=a:a=a:a=a:a=a:a=a
-a=a:a=a:a=a:a=a:a=a:a=a:a=a:a=a:a=a:a=a
-a=a:a=a:a=a:a=a:a=a:a=a:a=a:a=a:a=a:a=a
-a=a:a=a:a=a:a=a:a=a:a=a:a=a:a=a:a=a:a=a
-a=a:a=a:a=a:a=a:a=a:a=a:a=a:a=a:a=a:a=a
-a=a:a=a:a=a:a=a:a=a:a=a:a=a:a=a:a=a:a=a
-a=a:a=a:a=a:a=a:a=a:a=a:a=a:a=a:a=a:a=a
-a=a:a=a:a=a:a=a:a=a:a=a:a=a:a=a:a=a:a=a
-next
+sub b$()
+static a$
+a$=a$+"f"
+?a$
+end sub
+?a$
+b$()
+?a$
+b$()
+?a$
+b$()

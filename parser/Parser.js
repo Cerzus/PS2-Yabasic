@@ -25,8 +25,7 @@ class Parser {
             this.symbolTable = {
                 stringVariables: [],
                 numericVariables: ['numparams', 'PI', 'pi', 'EULER', 'euler'],
-                stringFunctionsAndArrays: ['docu$'],
-                numericFunctionsAndArrays: [],
+                subroutinesAndArrays: ['docu$'],
             };
         }
 

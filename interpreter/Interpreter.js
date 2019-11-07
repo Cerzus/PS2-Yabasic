@@ -278,10 +278,19 @@ class Interpreter {
             };
 
             this.symbolStack = new SymbolStack(compiledSource.symbolTable);
-            this.symbolStack.globalNumericVariables[1] = 3.14159265359; // PI
-            this.symbolStack.globalNumericVariables[2] = 3.14159265359; // pi
-            this.symbolStack.globalNumericVariables[3] = 2.71828182864; // EULER
-            this.symbolStack.globalNumericVariables[4] = 2.71828182864; // euler
+            this.symbolStack.setGlobalVariables({
+                PI:  3.14159265359,
+                pi:  3.14159265359,
+                EULER: 2.71828182864,
+                euler: 2.71828182864,
+            });
+            this.symbolStack.setGlobalSubroutinesAndArrays({
+                docu$: {
+                    dimensions: [compiledSource.documentation.length],
+                    values: compiledSource.documentation,
+                },
+                ...this.subroutines,
+            });
 
             this.variables = {
                 pi: 3.14159265359,
@@ -325,9 +334,7 @@ class Interpreter {
 
             this.subroutineName = null; // the current subroutine that's being executed
             this.arrayReferenceParameters = [];
-            // this.localVariables = []; // holds an array of names of all variables that currently have local scope
             this.localArrays = []; // holds an array of names of all arrays that currently have local scope
-            this.staticVariables = []; // hold an array of names of all variables that currently have static scope
             this.staticArrays = []; // hold an array of names of all arrays that currently have static scope
             this.callStack = []; // holds RETURN information for both subroutine calls and GOSUBs
             this.currentSubroutineLevel = 0; // how many subroutines within subroutine's we are located
@@ -440,7 +447,6 @@ class Interpreter {
             clearTimeout(this.runTimeoutId);
             this.runTimeoutId = null;
 
-            console.log('variables', this.variables);
             console.log('symbol stack', this.symbolStack);
             // console.log('arrays', this.arrays);
             // console.log('inputBuffer', this.inputBuffer);

@@ -139,9 +139,11 @@ Parser.prototype.evaluateSTATIC_STATEMENT = function (node) {
     for (let variable of node.variables) {
         switch (variable.type) {
             case 'STRING_VARIABLE':
+                this.addInstruction(variable.line, 'STATIC_STRING_VARIABLE', this.stringVariable(variable.name));
+                break;
             case 'NUMERIC_VARIABLE':
             case 'NUMPARAMS':
-                this.addInstruction(variable.line, 'STATIC_VARIABLE', variable.name);
+                this.addInstruction(variable.line, 'STATIC_NUMERIC_VARIABLE', this.numericVariable(variable.name));
                 break;
             case 'STRING_FUNCTION_OR_ARRAY':
             case 'NUMERIC_FUNCTION_OR_ARRAY':

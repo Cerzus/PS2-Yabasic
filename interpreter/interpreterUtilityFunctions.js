@@ -146,18 +146,6 @@ Interpreter.prototype.pushNumericArray = function (value) {
     this.valuesStackPush({ value, type: 'NumericArray' });
 };
 
-Interpreter.prototype.scopeVariableName = function (name) {
-    if (this.localVariables.indexOf(name) >= 0) {
-        return this.localScopeName(name);
-    }
-
-    if (this.staticVariables.indexOf(name) >= 0) {
-        return this.staticScopeName(name);
-    }
-
-    return name;
-};
-
 Interpreter.prototype.localScopeName = function (name) {
     return this.currentSubroutineLevel + '/' + name;
 };

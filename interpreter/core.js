@@ -27,23 +27,14 @@ Interpreter.prototype.instructionSTRING = function (value) {
 };
 
 Interpreter.prototype.instructionSTORE_STRING_VARIABLE = function (variableName) {
-    // this.variables[this.scopeVariableName(variableName)] = this.popString();
     this.symbolStack.getStringVariableStore(variableName)[variableName] = this.popString();
 };
 
 Interpreter.prototype.instructionSTORE_NUMERIC_VARIABLE = function (variableName) {
-    // this.variables[this.scopeVariableName(variableName)] = this.popNumber();
     this.symbolStack.getNumericVariableStore(variableName)[variableName] = this.popNumber();
 };
 
 Interpreter.prototype.instructionLOAD_STRING_VARIABLE = function (variableName) {
-    // variableName = this.scopeVariableName(variableName);
-
-    // if (!(variableName in this.variables)) {
-    //     this.variables[variableName] = '';
-    // }
-
-    // this.pushString(this.variables[variableName]);
     const store = this.symbolStack.getStringVariableStore(variableName);
     let string = store[variableName];
 
@@ -57,13 +48,6 @@ Interpreter.prototype.instructionLOAD_STRING_VARIABLE = function (variableName) 
 };
 
 Interpreter.prototype.instructionLOAD_NUMERIC_VARIABLE = function (variableName) {
-    // variableName = this.scopeVariableName(variableName);
-
-    // if (!(variableName in this.variables)) {
-    //     this.variables[variableName] = 0;
-    // }
-
-    // this.pushNumber(this.variables[variableName]);
     const store = this.symbolStack.getNumericVariableStore(variableName);
     let number = store[variableName];
 
