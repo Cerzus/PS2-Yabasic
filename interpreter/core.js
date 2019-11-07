@@ -28,31 +28,51 @@ Interpreter.prototype.instructionSTRING = function (value) {
 };
 
 Interpreter.prototype.instructionSTORE_STRING_VARIABLE = function (variableName) {
-    this.variables[this.scopeVariableName(variableName)] = this.popString();
+    // this.variables[this.scopeVariableName(variableName)] = this.popString();
+    this.symbolStack.getStringVariableStore(variableName)[variableName] = this.popString();
 };
 
 Interpreter.prototype.instructionSTORE_NUMERIC_VARIABLE = function (variableName) {
-    this.variables[this.scopeVariableName(variableName)] = this.popNumber();
+    // this.variables[this.scopeVariableName(variableName)] = this.popNumber();
+    this.symbolStack.getNumericVariableStore(variableName)[variableName] = this.popNumber();
 };
 
 Interpreter.prototype.instructionLOAD_STRING_VARIABLE = function (variableName) {
-    variableName = this.scopeVariableName(variableName);
+    // variableName = this.scopeVariableName(variableName);
 
-    if (!(variableName in this.variables)) {
-        this.variables[variableName] = '';
+    // if (!(variableName in this.variables)) {
+    //     this.variables[variableName] = '';
+    // }
+
+    // this.pushString(this.variables[variableName]);
+    let string = this.symbolStack.getStringVariableStore(variableName)[variableName];
+
+    if (string === undefined) {
+        string = '';
+
+        this.symbolStack.getStringVariableStore(variableName)[variableName] = string;
     }
 
-    this.pushString(this.variables[variableName]);
+    this.pushString(string);
 };
 
 Interpreter.prototype.instructionLOAD_NUMERIC_VARIABLE = function (variableName) {
-    variableName = this.scopeVariableName(variableName);
+    // variableName = this.scopeVariableName(variableName);
 
-    if (!(variableName in this.variables)) {
-        this.variables[variableName] = 0;
+    // if (!(variableName in this.variables)) {
+    //     this.variables[variableName] = 0;
+    // }
+
+    // this.pushNumber(this.variables[variableName]);
+    let number = this.symbolStack.getNumericVariableStore(variableName)[variableName];
+
+    if (number === undefined) {
+        number = 0;
+
+        this.symbolStack.getNumericVariableStore(variableName)[variableName] = number;
     }
 
-    this.pushNumber(this.variables[variableName]);
+    this.pushNumber(number);
 };
 
 Interpreter.prototype.instructionCOMPILE = function () {

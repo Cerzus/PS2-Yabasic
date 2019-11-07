@@ -77,20 +77,20 @@ Parser.prototype.evaluateSUBROUTINE_STATEMENT = function (node) {
         address: this.instructions.length,
     };
 
-    this.addInstruction(node.line, 'LOCAL_VARIABLE', 'numparams');
-    this.addInstruction(node.line, 'STORE_NUMERIC_VARIABLE', 'numparams');
+    this.addInstruction(node.line, 'LOCAL_NUMERIC_VARIABLE', this.numericVariable('numparams'));
+    this.addInstruction(node.line, 'STORE_NUMERIC_VARIABLE', this.numericVariable('numparams'));
 
     for (let i = node.parameters.length - 1; i >= 0; i--) {
         const parameter = node.parameters[i];
         switch (parameter.type) {
             case 'STRING_VARIABLE':
-                this.addInstruction(parameter.line, 'LOCAL_VARIABLE', parameter.name);
-                this.addInstruction(parameter.line, 'STORE_STRING_VARIABLE', parameter.name);
+                this.addInstruction(parameter.line, 'LOCAL_STRING_VARIABLE', this.stringVariable(parameter.name));
+                this.addInstruction(parameter.line, 'STORE_STRING_VARIABLE', this.stringVariable(parameter.name));
                 break;
             case 'NUMERIC_VARIABLE':
             case 'NUMPARAMS':
-                this.addInstruction(parameter.line, 'LOCAL_VARIABLE', parameter.name);
-                this.addInstruction(parameter.line, 'STORE_NUMERIC_VARIABLE', parameter.name);
+                this.addInstruction(parameter.line, 'LOCAL_NUMERIC_VARIABLE', this.numericVariable(parameter.name));
+                this.addInstruction(parameter.line, 'STORE_NUMERIC_VARIABLE', this.numericVariable(parameter.name));
                 break;
             case 'STRING_ARRAY':
             case 'NUMERIC_ARRAY':
@@ -120,9 +120,11 @@ Parser.prototype.evaluateLOCAL_STATEMENT = function (node) {
     for (let variable of node.variables) {
         switch (variable.type) {
             case 'STRING_VARIABLE':
+                this.addInstruction(variable.line, 'LOCAL_STRING_VARIABLE', this.stringVariable(variable.name));
+                break;
             case 'NUMERIC_VARIABLE':
             case 'NUMPARAMS':
-                this.addInstruction(variable.line, 'LOCAL_VARIABLE', variable.name);
+                this.addInstruction(variable.line, 'LOCAL_NUMERIC_VARIABLE', this.numericVariable(variable.name));
                 break;
             case 'STRING_FUNCTION_OR_ARRAY':
             case 'NUMERIC_FUNCTION_OR_ARRAY':
@@ -230,7 +232,7 @@ Parser.prototype.evaluateFOR_STATEMENT = function (node) {
         this.addInstruction(node.line, 'NUMBER', 1);
     }
 
-    this.addInstruction(node.line, 'FOR_CONDITIONAL_CONTINUE', node.variable.name, continueLoopDestinationIndex);
+    this.addInstruction(node.line, 'FOR_CONDITIONAL_CONTINUE', this.numericVariable(node.variable.name), continueLoopDestinationIndex);
 
-    this.insertInstruction(exitLoopInstructionIndex, node.line, 'FOR_CONDITIONAL_EXIT', node.variable.name, this.instructions.length);
+    this.insertInstruction(exitLoopInstructionIndex, node.line, 'FOR_CONDITIONAL_EXIT', this.numericVariable(node.variable.name), this.instructions.length);
 };

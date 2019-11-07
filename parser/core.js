@@ -119,12 +119,12 @@ Parser.prototype.evaluateASSIGNMENT_STATEMENT = function (node) {
     switch (node.left.type) {
         case 'STRING_VARIABLE':
             this.evaluateNode(node.right);
-            this.addInstruction(node.left.line, 'STORE_STRING_VARIABLE', node.left.name);
+            this.addInstruction(node.left.line, 'STORE_STRING_VARIABLE', this.stringVariable(node.left.name));
             break;
         case 'NUMERIC_VARIABLE':
         case 'NUMPARAMS':
             this.evaluateNode(node.right);
-            this.addInstruction(node.left.line, 'STORE_NUMERIC_VARIABLE', node.left.name);
+            this.addInstruction(node.left.line, 'STORE_NUMERIC_VARIABLE', this.numericVariable(node.left.name));
             break;
         case 'STRING_FUNCTION_OR_ARRAY':
         case 'NUMERIC_FUNCTION_OR_ARRAY':
@@ -151,12 +151,12 @@ Parser.prototype.evaluateREAD_STATEMENT = function (node) {
         switch (variable.type) {
             case 'STRING_VARIABLE':
                 this.addInstruction(variable.line, 'READ', 'String');
-                this.addInstruction(variable.line, 'STORE_STRING_VARIABLE', variable.name);
+                this.addInstruction(variable.line, 'STORE_STRING_VARIABLE', this.stringVariable(variable.name));
                 break;
             case 'NUMERIC_VARIABLE':
             case 'NUMPARAMS':
                 this.addInstruction(variable.line, 'READ', 'Number');
-                this.addInstruction(variable.line, 'STORE_NUMERIC_VARIABLE', variable.name);
+                this.addInstruction(variable.line, 'STORE_NUMERIC_VARIABLE', this.numericVariable(variable.name));
                 break;
             case 'STRING_FUNCTION_OR_ARRAY':
             case 'NUMERIC_FUNCTION_OR_ARRAY':

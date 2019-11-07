@@ -22,18 +22,16 @@ class Parser {
             this.dataLabels = {};
             this.documentation = [''];
 
-            this.symbolTableStringVariables = [];
-            this.symbolTableNumericVariables = ['numparams', 'PI', 'pi', 'EULER', 'euler'];
-            this.symbolTableStringFunctionsAndArrays = ['docu$'];
-            this.symbolTableNumericFunctionsAndArrays = [];
+            this.symbolTable = new SymbolTable();
+            this.symbolTable.stringVariables = [];
+            this.symbolTable.numericVariables = ['numparams', 'PI', 'pi', 'EULER', 'euler'];
+            this.symbolTable.stringFunctionsAndArrays = ['docu$'];
+            this.symbolTable.numericFunctionsAndArrays = [];
         }
 
         const abstractSyntaxTree = this.parser.parse(source, {
             version,
-            symbolTableStringVariables: this.symbolTableStringVariables,
-            symbolTableNumericVariables: this.symbolTableNumericVariables,
-            symbolTableStringFunctionsAndArrays: this.symbolTableStringFunctionsAndArrays,
-            symbolTableNumericFunctionsAndArrays: this.symbolTableNumericFunctionsAndArrays,
+            symbolTable: this.symbolTable,
 
             internalLabels: Object.keys(this.instructionLabels),
             subroutineNames: Object.keys(this.subroutines),
@@ -43,10 +41,10 @@ class Parser {
             onAbstractSyntaxTreeCreated(abstractSyntaxTree);
         }
 
-        console.log('symbolTableStringVariables', this.symbolTableStringVariables);
-        console.log('symbolTableNumericVariables', this.symbolTableNumericVariables);
-        console.log('symbolTableStringFunctionsAndArrays', this.symbolTableStringFunctionsAndArrays);
-        console.log('symbolTableNumericFunctionsAndArrays', this.symbolTableNumericFunctionsAndArrays);
+        console.log('symbolTableStringVariables', this.symbolTable.stringVariables);
+        console.log('symbolTableNumericVariables', this.symbolTable.numericVariables);
+        console.log('symbolTableStringFunctionsAndArrays', this.symbolTable.stringFunctionsAndArrays);
+        console.log('symbolTableNumericFunctionsAndArrays', this.symbolTable.numericFunctionsAndArrays);
 
         this.evaluateNode(abstractSyntaxTree);
 
@@ -58,6 +56,8 @@ class Parser {
             data: this.data,
             dataLabels: this.dataLabels,
             documentation: this.documentation,
+
+            symbolTable: this.symbolTable,
         };
     }
 
@@ -131,5 +131,13 @@ class Parser {
 
     asciiEncodeString(string) {
         return this.compilingAtRuntime ? string : this.asciiTable.encode(string);
+    }
+
+    stringVariable(variableName) {
+        return this.symbolTable.stringVariables.indexOf(variableName);
+    }
+
+    numericVariable(variableName) {
+        return this.symbolTable.numericVariables.indexOf(variableName);
     }
 }

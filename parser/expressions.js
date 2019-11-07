@@ -101,11 +101,11 @@ Parser.prototype.evaluateNUMPARAMS = function (node) {
 };
 
 Parser.prototype.evaluateNUMERIC_VARIABLE = function (node) {
-    this.addInstruction(node.line, 'LOAD_NUMERIC_VARIABLE', node.name);
+    this.addInstruction(node.line, 'LOAD_NUMERIC_VARIABLE', this.numericVariable(node.name));
 };
 
 Parser.prototype.evaluateSTRING_VARIABLE = function (node) {
-    this.addInstruction(node.line, 'LOAD_STRING_VARIABLE', node.name);
+    this.addInstruction(node.line, 'LOAD_STRING_VARIABLE', this.stringVariable(node.name));
 };
 
 Parser.prototype.evaluateNUMERIC_ARRAY = function (node) {

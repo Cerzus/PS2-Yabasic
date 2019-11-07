@@ -24,8 +24,8 @@ Interpreter.prototype.modifyStringVariable = function (replaceStringPart, hasInd
 Interpreter.prototype.modifyStringArray = function (replaceStringPart, hasIndex, name, numArguments, hasLength) {
     const replacementString = this.popString();
     if (hasLength) {
-    // ~~? 2.64: TODO, 2.66: TODO 
-    var length = ~~this.popNumber();
+        // ~~? 2.64: TODO, 2.66: TODO 
+        var length = ~~this.popNumber();
     }
     // ~~? 2.64: TODO, 2.66: TODO 
     const index = hasIndex ? ~~this.popNumber() : null;
@@ -218,8 +218,8 @@ Interpreter.prototype.instructionTIME$ = function () {
         now.getHours(),
         now.getMinutes(),
         now.getSeconds(),
-    // ~~? 2.64: TODO, 2.66: TODO 
-    ~~((now.getTime() - this.programStartedTime) / 1000),
+        // ~~? 2.64: TODO, 2.66: TODO 
+        ~~((now.getTime() - this.programStartedTime) / 1000),
     ].join('-'));
 };
 
@@ -250,8 +250,8 @@ Interpreter.prototype.instructionHEX$ = function () {
         if (decimal < 0) {
             this.throwError('CantConvertNegativeNumberToHexadecimal');
         }
-    // numberToInt? 2.64: TODO, 2.66: TODO 
-    this.pushString(this.numberToInt(decimal).toString(16));
+        // numberToInt? 2.64: TODO, 2.66: TODO 
+        this.pushString(this.numberToInt(decimal).toString(16));
     } else {
         if (isFinite(decimal)) {
             this.pushString((Math.sign(decimal) * Math.floor(Math.abs(decimal))).toString(16));

@@ -83,12 +83,12 @@ Parser.prototype.evaluateINPUT_STATEMENT = function (node) {
         switch (item.type) {
             case 'STRING_VARIABLE':
                 this.addInstruction(item.line, 'INPUT', node.splitOnSpaces, true);
-                this.addInstruction(item.line, 'STORE_STRING_VARIABLE', item.name);
+                this.addInstruction(item.line, 'STORE_STRING_VARIABLE', this.stringVariable(item.name));
                 break;
             case 'NUMERIC_VARIABLE':
             case 'NUMPARAMS':
                 this.addInstruction(item.line, 'INPUT', node.splitOnSpaces, false);
-                this.addInstruction(item.line, 'STORE_NUMERIC_VARIABLE', item.name);
+                this.addInstruction(item.line, 'STORE_NUMERIC_VARIABLE', this.numericVariable(item.name));
                 break;
             case 'STRING_FUNCTION_OR_ARRAY':
             case 'NUMERIC_FUNCTION_OR_ARRAY':

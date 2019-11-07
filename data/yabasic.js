@@ -81,12 +81,12 @@
 
     function addFunctionOrArrayNameToSymbolTable(name) {
         if (name.endsWith('$')) {
-            if (options.symbolTableNumericFunctionsAndArrays.indexOf(name) < 0) {
-                options.symbolTableNumericFunctionsAndArrays.push(name);
+            if (options.symbolTable.stringFunctionsAndArrays.indexOf(name) < 0) {
+                options.symbolTable.stringFunctionsAndArrays.push(name);
             }
         } else {
-            if (options.symbolTableNumericFunctionsAndArrays.indexOf(name) < 0) {
-                options.symbolTableNumericFunctionsAndArrays.push(name);
+            if (options.symbolTable.numericFunctionsAndArrays.indexOf(name) < 0) {
+                options.symbolTable.numericFunctionsAndArrays.push(name);
             }
         }
         return name;
@@ -184,8 +184,8 @@ NumericArrayIdentifier
 NumericVariable
     = name:NumericNonArrayIdentifier
         {
-            if (options.symbolTableNumericVariables.indexOf(name) < 0) {
-                options.symbolTableNumericVariables.push(name);
+            if (options.symbolTable.numericVariables.indexOf(name) < 0) {
+                options.symbolTable.numericVariables.push(name);
             }
             return createNode({ type: "NUMERIC_VARIABLE", name }); 
         }
@@ -193,8 +193,8 @@ NumericVariable
 StringVariable
     = name:StringNonArrayIdentifier
         {
-            if (options.symbolTableStringVariables.indexOf(name) < 0) {
-                options.symbolTableStringVariables.push(name);
+            if (options.symbolTable.stringVariables.indexOf(name) < 0) {
+                options.symbolTable.stringVariables.push(name);
             }
             return createNode({ type: "STRING_VARIABLE", name });
         }

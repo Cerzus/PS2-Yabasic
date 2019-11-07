@@ -10,8 +10,8 @@ class Interpreter {
     constructor() {
         this.version = 2.66;
         this.fps = 50;
-        this.cpuUsage = 1;
-        this.maxInstructionsPerFrame = 1400;
+        this.cpuUsage = 0.2;
+        this.maxInstructionsPerFrame = 14000000;
         this.resolution = {
             width: 640,
             height: 512,
@@ -277,6 +277,12 @@ class Interpreter {
                 },
             };
 
+            this.symbolStack = new SymbolStack(compiledSource.symbolTable);
+            this.symbolStack.globalNumericVariables[1] = 3.14159265359; // PI
+            this.symbolStack.globalNumericVariables[2] = 3.14159265359; // pi
+            this.symbolStack.globalNumericVariables[3] = 2.71828182864; // EULER
+            this.symbolStack.globalNumericVariables[4] = 2.71828182864; // euler
+
             this.variables = {
                 pi: 3.14159265359,
                 PI: 3.14159265359,
@@ -319,7 +325,7 @@ class Interpreter {
 
             this.subroutineName = null; // the current subroutine that's being executed
             this.arrayReferenceParameters = [];
-            this.localVariables = []; // holds an array of names of all variables that currently have local scope
+            // this.localVariables = []; // holds an array of names of all variables that currently have local scope
             this.localArrays = []; // holds an array of names of all arrays that currently have local scope
             this.staticVariables = []; // hold an array of names of all variables that currently have static scope
             this.staticArrays = []; // hold an array of names of all arrays that currently have static scope
@@ -432,6 +438,7 @@ class Interpreter {
             this.runTimeoutId = null;
 
             console.log('variables', this.variables);
+            console.log('symbol stack', this.symbolStack);
             // console.log('arrays', this.arrays);
             // console.log('inputBuffer', this.inputBuffer);
             // console.log('subroutine', this.subroutine);
