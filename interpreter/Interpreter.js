@@ -279,8 +279,8 @@ class Interpreter {
 
             this.symbolStack = new SymbolStack(compiledSource.symbolTable);
             this.symbolStack.setGlobalVariables({
-                PI:  3.14159265359,
-                pi:  3.14159265359,
+                PI: 3.14159265359,
+                pi: 3.14159265359,
                 EULER: 2.71828182864,
                 euler: 2.71828182864,
             });
@@ -299,7 +299,7 @@ class Interpreter {
                 EULER: 2.71828182864,
             };
 
-            console.log('instructions', this.instructions);
+            this.logInstructions();
             // console.log('subroutines', this.subroutines);
             // console.log('instructionLabels', this.instructionLabels);
             // console.log('data', this.data);
@@ -447,7 +447,7 @@ class Interpreter {
             clearTimeout(this.runTimeoutId);
             this.runTimeoutId = null;
 
-            console.log('symbol stack', this.symbolStack);
+            console.log('Symbol stack', this.symbolStack);
             // console.log('arrays', this.arrays);
             // console.log('inputBuffer', this.inputBuffer);
             // console.log('subroutine', this.subroutine);
@@ -499,5 +499,11 @@ class Interpreter {
 
     hideMessage() {
         this.messageDiv.style.display = 'none';
+    }
+
+    logInstructions() {
+        console.log('Instructions: ', this.instructions.map(instruction => {
+            return [instruction.line, instruction.type.substring(11), ...instruction.arguments];
+        }));
     }
 }

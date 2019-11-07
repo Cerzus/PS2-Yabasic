@@ -130,7 +130,7 @@ Parser.prototype.evaluateASSIGNMENT_STATEMENT = function (node) {
         case 'NUMERIC_FUNCTION_OR_ARRAY':
             this.evaluateArgumentNodes(node.left.arguments);
             this.evaluateNode(node.right);
-            this.addInstruction(node.left.line, 'STORE_ARRAY', node.left.name, node.left.arguments.length);
+            this.addInstruction(node.left.line, 'STORE_ARRAY_ELEMENT', node.left.name, node.left.arguments.length);
             break;
     }
 };
@@ -162,7 +162,7 @@ Parser.prototype.evaluateREAD_STATEMENT = function (node) {
             case 'NUMERIC_FUNCTION_OR_ARRAY':
                 this.evaluateArgumentNodes(variable.arguments);
                 this.addInstruction(variable.line, 'READ', variable.name.endsWith('$') ? 'String' : 'Number');
-                this.addInstruction(variable.line, 'STORE_ARRAY', variable.name, variable.arguments.length);
+                this.addInstruction(variable.line, 'STORE_ARRAY_ELEMENT', variable.name, variable.arguments.length);
                 break;
         }
     }

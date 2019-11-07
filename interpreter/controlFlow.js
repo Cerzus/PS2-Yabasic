@@ -203,14 +203,14 @@ Interpreter.prototype.instructionRETURN = function (hasReturnValue) {
     }
 };
 
-Interpreter.prototype.instructionLOCAL_ARRAY_REFERENCE = function (arrayName) {
+Interpreter.prototype.instructionLOCAL_ARRAY = function (arrayName) {
     if (this.localArrays.indexOf(arrayName) < 0) {
         this.localArrays.push(arrayName);
     }
     // this.instructionDIM(arrayName, 0);
 };
 
-Interpreter.prototype.instructionLOCAL_ARRAY = function (arrayName, numDimensions) {
+Interpreter.prototype.instructionLOCAL_ARRAY_DIM = function (arrayName, numDimensions) {
     if (this.localArrays.indexOf(arrayName) >= 0 || this.staticArrays.indexOf(arrayName) >= 0) {
         this.throwError('AlreadyDefinedWithinSub', arrayName);
     }
@@ -219,7 +219,7 @@ Interpreter.prototype.instructionLOCAL_ARRAY = function (arrayName, numDimension
     this.instructionDIM(arrayName, numDimensions);
 };
 
-Interpreter.prototype.instructionSTATIC_ARRAY = function (arrayName, numDimensions) {
+Interpreter.prototype.instructionSTATIC_ARRAY_DIM = function (arrayName, numDimensions) {
     if (this.staticArrays.indexOf(arrayName) < 0) {
         this.staticArrays.push(arrayName);
     }
@@ -242,7 +242,7 @@ Interpreter.prototype.instructionLOCAL_STRING_VARIABLE = function (variableName)
         this.throwError('AlreadyDefinedWithinSub', this.symbolStack.symbolTable.stringVariables[variableName]);
     }
 
-    this.symbolStack.stringVariablesScope[variableName] = 1;
+    this.symbolStack.stringVariablesScope[variableName] = 'LOCAL';
 };
 
 Interpreter.prototype.instructionLOCAL_NUMERIC_VARIABLE = function (variableName) {
@@ -250,15 +250,15 @@ Interpreter.prototype.instructionLOCAL_NUMERIC_VARIABLE = function (variableName
         this.throwError('AlreadyDefinedWithinSub', this.symbolStack.symbolTable.numericVariables[variableName]);
     }
 
-    this.symbolStack.numericVariablesScope[variableName] = 1;
+    this.symbolStack.numericVariablesScope[variableName] = 'LOCAL';
 };
 
 Interpreter.prototype.instructionSTATIC_STRING_VARIABLE = function (variableName) {
-    this.symbolStack.stringVariablesScope[variableName] = 2;
+    this.symbolStack.stringVariablesScope[variableName] = 'STATIC';
 };
 
 Interpreter.prototype.instructionSTATIC_NUMERIC_VARIABLE = function (variableName) {
-    this.symbolStack.numericVariablesScope[variableName] = 2;
+    this.symbolStack.numericVariablesScope[variableName] = 'STATIC';
 };
 
 Interpreter.prototype.instructionFOR_CONDITIONAL_EXIT = function (variableName, destination) {

@@ -41,8 +41,6 @@ class Parser {
             onAbstractSyntaxTreeCreated(abstractSyntaxTree);
         }
 
-        console.log('symbolTable', this.symbolTable);
-
         this.evaluateNode(abstractSyntaxTree);
 
         // TODO: test if sending everything when using COMPILE makes a significant difference

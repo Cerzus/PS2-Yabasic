@@ -318,7 +318,7 @@ Interpreter.prototype.instructionCALL_FUNCTION_OR_ARRAY = function (name, numArg
     if (name in this.subroutines) {
         this.instructionCALL_FUNCTION(name, numArguments);
     } else {
-        this.instructionCALL_ARRAY(name, numArguments, isUsedAsArgument);
+        this.instructionLOAD_ARRAY_ELEMENT(name, numArguments, isUsedAsArgument);
     }
 };
 

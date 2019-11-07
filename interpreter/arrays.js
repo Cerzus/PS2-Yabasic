@@ -73,7 +73,7 @@ Interpreter.prototype.getArrayDimensions = function (numDimensions) {
 // INSTRUCTIONS //
 //////////////////
 
-Interpreter.prototype.instructionSTORE_ARRAY = function (name, numArguments) {
+Interpreter.prototype.instructionSTORE_ARRAY_ELEMENT = function (name, numArguments) {
     const arrayName = this.scopeArrayName(name);
 
     if (!(arrayName in this.arrays)) {
@@ -86,7 +86,7 @@ Interpreter.prototype.instructionSTORE_ARRAY = function (name, numArguments) {
     this.arrays[arrayName].values[index] = value;
 };
 
-Interpreter.prototype.instructionSTORE_ARRAY_REFERENCE = function (arrayName) {
+Interpreter.prototype.instructionSTORE_ARRAY = function (arrayName) {
     const value = this.popValue();
     const name = this.scopeArrayName(arrayName);
 
@@ -101,7 +101,7 @@ Interpreter.prototype.instructionSTORE_ARRAY_REFERENCE = function (arrayName) {
     }
 };
 
-Interpreter.prototype.instructionLOAD_ARRAY_REFERENCE = function (name, type) {
+Interpreter.prototype.instructionLOAD_ARRAY = function (name, type) {
     const arrayName = this.scopeArrayName(name);
 
     if (!(arrayName in this.arrays)) {
@@ -111,7 +111,7 @@ Interpreter.prototype.instructionLOAD_ARRAY_REFERENCE = function (name, type) {
     this.valuesStackPush({ value: this.arrays[arrayName], type });
 };
 
-Interpreter.prototype.instructionCALL_ARRAY = function (name, numArguments, isUsedAsArgument) {
+Interpreter.prototype.instructionLOAD_ARRAY_ELEMENT = function (name, numArguments, isUsedAsArgument) {
     const arrayName = this.scopeArrayName(name);
 
     if (!(arrayName in this.arrays)) {
@@ -120,7 +120,7 @@ Interpreter.prototype.instructionCALL_ARRAY = function (name, numArguments, isUs
 
     if (numArguments === 0) {
         // if (isUsedAsArgument) {
-        this.instructionLOAD_ARRAY_REFERENCE(name, name.endsWith('$') ? 'StringArray' : 'NumericArray');
+        this.instructionLOAD_ARRAY(name, name.endsWith('$') ? 'StringArray' : 'NumericArray');
         // } else {
         // this.throwError(`expected a ${name.endsWith('$') ? 'string' : 'number'} but found a reference to a ${name.endsWith('$') ? 'string' : 'numeric'} array`);
         // }
@@ -135,12 +135,12 @@ Interpreter.prototype.instructionCALL_ARRAY = function (name, numArguments, isUs
     }
 };
 
-Interpreter.prototype.instructionCALL_ARRAY_PUSH_INDICES = function (name, numArguments) {
+Interpreter.prototype.instructionLOAD_ARRAY_ELEMENT_PUSH_INDICES = function (name, numArguments) {
     for (let i = 0; i < numArguments; i++) {
         this.valuesStackPush({ ...this.valuesStackPeek(numArguments - 1) });
     }
 
-    this.instructionCALL_ARRAY(name, numArguments);
+    this.instructionLOAD_ARRAY_ELEMENT(name, numArguments);
 };
 
 Interpreter.prototype.instructionDIM = function (name, numDimensions) {

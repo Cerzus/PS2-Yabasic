@@ -94,8 +94,8 @@ Parser.prototype.evaluateSUBROUTINE_STATEMENT = function (node) {
                 break;
             case 'STRING_ARRAY':
             case 'NUMERIC_ARRAY':
-                this.addInstruction(parameter.line, 'LOCAL_ARRAY_REFERENCE', parameter.name);
-                this.addInstruction(parameter.line, 'STORE_ARRAY_REFERENCE', parameter.name);
+                this.addInstruction(parameter.line, 'LOCAL_ARRAY', parameter.name);
+                this.addInstruction(parameter.line, 'STORE_ARRAY', parameter.name);
                 break;
         }
     }
@@ -129,7 +129,7 @@ Parser.prototype.evaluateLOCAL_STATEMENT = function (node) {
             case 'STRING_FUNCTION_OR_ARRAY':
             case 'NUMERIC_FUNCTION_OR_ARRAY':
                 this.evaluateArgumentNodes(variable.arguments);
-                this.addInstruction(variable.line, 'LOCAL_ARRAY', variable.name, variable.arguments.length);
+                this.addInstruction(variable.line, 'LOCAL_ARRAY_DIM', variable.name, variable.arguments.length);
                 break;
         }
     }
@@ -148,7 +148,7 @@ Parser.prototype.evaluateSTATIC_STATEMENT = function (node) {
             case 'STRING_FUNCTION_OR_ARRAY':
             case 'NUMERIC_FUNCTION_OR_ARRAY':
                 this.evaluateArgumentNodes(variable.arguments);
-                this.addInstruction(variable.line, 'STATIC_ARRAY', variable.name, variable.arguments.length);
+                this.addInstruction(variable.line, 'STATIC_ARRAY_DIM', variable.name, variable.arguments.length);
                 break;
         }
     }

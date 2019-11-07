@@ -29,7 +29,7 @@ class SymbolStack {
 
             // subroutines get symbolstores for static variables and arrays
             if ('parameters' in subroutineOrArray) {
-                subroutineOrArray.numericVariables = new Float64Array(this.symbolTable.numericVariables.length);
+                subroutineOrArray.numericVariables = [];
                 subroutineOrArray.stringVariables = [];
                 subroutineOrArray.arrays = [];
             }
@@ -42,14 +42,14 @@ class SymbolStack {
         this.stackFrame = this.stackFrames[this.stackFrames.push({
             subroutine: subroutineName !== null ? this.globalSubroutinesAndArrays[this.symbolTable.subroutinesAndArrays.indexOf(subroutineName)] : null,
 
-            numericVariables: new Float64Array(this.symbolTable.numericVariables.length),
-            numericVariablesScope: new Uint8Array(this.symbolTable.numericVariables.length),
+            numericVariables: [],
+            numericVariablesScope: [],
 
             stringVariables: [],
-            stringVariablesScope: new Uint8Array(this.symbolTable.stringVariables.length),
+            stringVariablesScope: [],
 
             arrays: [],
-            arraysScope: new Uint8Array(this.symbolTable.subroutinesAndArrays.length),
+            arraysScope: [],
         }) - 1];
 
         this.localStringVariables = this.stackFrame.stringVariables;
@@ -78,9 +78,9 @@ class SymbolStack {
 
     getStringVariableStore(variableName) {
         switch (this.stringVariablesScope[variableName]) {
-            case 0:
+            case undefined:
                 return this.globalStringVariables;
-            case 1:
+            case 'LOCAL':
                 return this.localStringVariables;
             default:
                 return this.stackFrame.subroutine.stringVariables;
@@ -89,9 +89,9 @@ class SymbolStack {
 
     getNumericVariableStore(variableName) {
         switch (this.numericVariablesScope[variableName]) {
-            case 0:
+            case undefined:
                 return this.globalNumericVariables;
-            case 1:
+            case 'LOCAL':
                 return this.localNumericVariables;
             default:
                 return this.stackFrame.subroutine.numericVariables;
@@ -100,9 +100,9 @@ class SymbolStack {
 
     getArrayStore(arrayName) {
         switch (this.arraysScope[arrayName]) {
-            case 0:
+            case undefined:
                 return this.globalArrays;
-            case 1:
+            case 'LOCAL':
                 return this.localArrays;
             default:
                 return this.stackFrame.subroutine.arrays;
