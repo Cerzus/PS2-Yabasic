@@ -262,7 +262,7 @@ Interpreter.prototype.instructionLOCAL_STRING_VARIABLE = function (variableName)
         this.throwError('AlreadyDefinedWithinSub', this.symbolStack.symbolTable.stringVariables[variableName]);
     }
 
-    this.symbolStack.stringVariablesScope[variableName] = 'LOCAL';
+    this.symbolStack.stringVariablesScope[variableName] = 1;
 };
 
 Interpreter.prototype.instructionLOCAL_NUMERIC_VARIABLE = function (variableName) {
@@ -270,7 +270,7 @@ Interpreter.prototype.instructionLOCAL_NUMERIC_VARIABLE = function (variableName
         this.throwError('AlreadyDefinedWithinSub', this.symbolStack.symbolTable.numericVariables[variableName]);
     }
 
-    this.symbolStack.numericVariablesScope[variableName] = 'LOCAL';
+    this.symbolStack.numericVariablesScope[variableName] = 1;
 };
 
 Interpreter.prototype.instructionSTATIC_VARIABLE = function (variableName) {

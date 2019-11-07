@@ -64,12 +64,13 @@ Interpreter.prototype.instructionLOAD_NUMERIC_VARIABLE = function (variableName)
     // }
 
     // this.pushNumber(this.variables[variableName]);
-    let number = this.symbolStack.getNumericVariableStore(variableName)[variableName];
+    const store = this.symbolStack.getNumericVariableStore(variableName);
+    let number = store[variableName];
 
     if (number === undefined) {
         number = 0;
 
-        this.symbolStack.getNumericVariableStore(variableName)[variableName] = number;
+        store[variableName] = number;
     }
 
     this.pushNumber(number);

@@ -12,11 +12,11 @@ class SymbolStack {
 
     pushStackFrame() {
         this.stackFrame = this.stackFrames[this.stackFrames.push({
-            numericVariables: new Array(this.symbolTable.numericVariables.length),
+            numericVariables: new Float64Array(this.symbolTable.numericVariables.length),
             stringVariables: new Array(this.symbolTable.stringVariables.length),
 
-            numericVariablesScope: new Array(this.symbolTable.numericVariables.length),
-            stringVariablesScope: new Array(this.symbolTable.stringVariables.length),
+            numericVariablesScope: new Uint8Array(this.symbolTable.numericVariables.length),
+            stringVariablesScope: new Uint8Array(this.symbolTable.stringVariables.length),
         }) - 1];
 
         this.localStringVariables = this.stackFrame.stringVariables;
@@ -39,7 +39,7 @@ class SymbolStack {
 
     getStringVariableStore(variableName) {
         switch (this.numericVariablesScope[variableName]) {
-            case 'LOCAL':
+            case 1:
                 return this.localStringVariables;
             default:
                 return this.globalStringVariables;
@@ -48,7 +48,7 @@ class SymbolStack {
 
     getNumericVariableStore(variableName) {
         switch (this.numericVariablesScope[variableName]) {
-            case 'LOCAL':
+            case 1:
                 return this.localNumericVariables;
             default:
                 return this.globalNumericVariables;
