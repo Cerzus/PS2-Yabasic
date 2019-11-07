@@ -11,7 +11,7 @@ class Interpreter {
         this.version = 2.66;
         this.fps = 50;
         this.cpuUsage = 1;
-        this.maxInstructionsPerFrame = 14000000000000000;
+        this.maxInstructionsPerFrame = 1400;
         this.resolution = {
             width: 640,
             height: 512,
@@ -385,7 +385,7 @@ class Interpreter {
             let n = 0;
             do {
                 // run a maximum of ten instructions before checking if enough time has passed to take a break
-                for (let i = 0; i < 10000000000 && !this.endFrame && running; i++) {
+                for (let i = 0; i < 10 && !this.endFrame && running; i++) {
                     const instruction = instructions[this.programCounter++];
 
                     this[instruction.type](...instruction.arguments);
