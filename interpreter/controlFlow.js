@@ -56,11 +56,11 @@ Interpreter.prototype.instructionEND = function () {
 }
 
 Interpreter.prototype.instructionEXECUTE$ = function (numArguments) {
-    if (numArguments === 0 || this.valuesStackPeek(numArguments - 1)[1] !== 'String') {
+    if (numArguments === 0 || this.valuesStackPeek(numArguments - 1).type !== 'String') {
         this.throwError('NeedStringAsFunctionName');
     }
 
-    const name = this.valuesStackExtract(numArguments - 1)[0];
+    const name = this.valuesStackExtract(numArguments - 1).value;
 
     if (!name.endsWith('$')) {
         this.throwError('ExpectingNameOfFunctionNot', this.strings.get('String'), name);
@@ -72,11 +72,11 @@ Interpreter.prototype.instructionEXECUTE$ = function (numArguments) {
 }
 
 Interpreter.prototype.instructionEXECUTE = function (numArguments) {
-    if (numArguments === 0 || this.valuesStackPeek(numArguments - 1)[1] !== 'String') {
+    if (numArguments === 0 || this.valuesStackPeek(numArguments - 1).type !== 'String') {
         this.throwError('NeedStringAsFunctionName');
     }
 
-    const name = this.valuesStackExtract(numArguments - 1)[0];
+    const name = this.valuesStackExtract(numArguments - 1).value;
 
     if (name.endsWith('$')) {
         this.throwError('ExpectingNameOfFunctionNot', this.strings.get('Numeric'), name);
@@ -97,8 +97,7 @@ Interpreter.prototype.instructionCALL_FUNCTION = function (name, numArguments) {
 
     // check for wrong argument types
     for (let i = 0; i < numArguments; i++) {
-        const supplied = this.strings.get(this.valuesStackPeek(numArguments - 1 - i)[1])
-        // const supplied = this.strings.get(this.valuesStack[this.valuesStack.length - numArguments + i][1]);
+        const supplied = this.strings.get(this.valuesStackPeek(numArguments - 1 - i).type)
         const expected = this.strings.get(i < parameters.length ? parameters[i] : 'Nothing');
 
         if (supplied !== expected) {
@@ -159,8 +158,7 @@ Interpreter.prototype.instructionRETURN = function (hasReturnValue) {
         }
 
         if (hasReturnValue) {
-            const returnValueType = this.strings.get('A' + this.valuesStackPeek()[1]);
-            // const returnValueType = this.strings.get('A' + this.valuesStack[this.valuesStack.length - 1][1]);
+            const returnValueType = this.strings.get('A' + this.valuesStackPeek().type);
             const subroutineType = this.strings.get(this.subroutineName.endsWith('$') ? 'AString' : 'ANumber');
 
             if (returnValueType !== subroutineType) {

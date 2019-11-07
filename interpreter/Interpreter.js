@@ -10,8 +10,8 @@ class Interpreter {
     constructor() {
         this.version = 2.66;
         this.fps = 50;
-        this.cpuUsage = 1;
-        this.maxInstructionsPerFrame = 1400;
+        this.cpuUsage = 0.2;
+        this.maxInstructionsPerFrame = 1400000;
         this.resolution = {
             width: 640,
             height: 512,
@@ -243,7 +243,7 @@ class Interpreter {
             var message = this.strings.get('ParseErrorAt', error.found);
         }
 
-        this.errorQueue.push(['ParseError', error.location.start.line, message]);
+        this.errorQueue.push({ type: 'ParseError', line: error.location.start.line, message });
 
         if (this.isWaitingForRuntimeCompilation) {
             this.errorsFound = true;
@@ -314,7 +314,7 @@ class Interpreter {
             this.lineToX = null;
             this.lineToY = null;
             this.font = '';
-            this.streamError = [0, ['']];
+            this.streamError = { id: 0, message: [''] };
             this.streams = new Array(16).fill(false);
 
             this.graphicsScreen.reset(...this.colors[0]); // need to do this here, because the graphics screen might be shown before being opened (.e.g on a setrgb runtime error)
@@ -425,7 +425,6 @@ class Interpreter {
         else if (running) {
             this.requestFrame(endOfFrameTime - Date.now());
         } else {
-            console.log(Date.now() - this.programStartedTime)
             this.stop();
             this.showMessage(this.strings.get('ExecutionComplete'), this.strings.get('ProgramCompletedExecution'));
         }
@@ -447,9 +446,6 @@ class Interpreter {
             // console.log('inputBuffer', this.inputBuffer);
             // console.log('subroutine', this.subroutine);
 
-            // if (this.valuesStack.length > 0) {
-            //     console.error('values left in stack!', this.valuesStack);
-            // }
             if (this.valuesStackLength > 0) {
                 console.error('values left in stack!', this.valuesStack.slice(0, this.valuesStackLength));
             }
@@ -457,7 +453,7 @@ class Interpreter {
     }
 
     showErrorMessage() {
-        const latestErrorType = this.errorQueue[this.errorQueue.length - 1][0];
+        const latestErrorType = this.errorQueue[this.errorQueue.length - 1].type;
 
         if (this.programCounter > 0 && latestErrorType !== 'FatalError') {
             this.queueError('ProgramStoppedDueToError');
@@ -469,11 +465,11 @@ class Interpreter {
         let previousLine;
         for (let i = 0; i < this.errorQueue.length && message.length <= 252; i++) {
             const error = this.errorQueue[i];
-            const line = error[1];
+            const line = error.line;
             if (line === previousLine) {
-                message += '---' + this.strings.get(error[0]) + ': ' + error[2] + '\n';
+                message += '---' + this.strings.get(error.type) + ': ' + error.message + '\n';
             } else {
-                message += '---' + this.strings.get(error[0] + 'In', this.programName, line) + error[2] + '\n';
+                message += '---' + this.strings.get(error.type + 'In', this.programName, line) + error.message + '\n';
             }
             previousLine = line;
         }

@@ -138,9 +138,9 @@ Parser.prototype.evaluateASSIGNMENT_STATEMENT = function (node) {
 Parser.prototype.evaluateDATA_STATEMENT = function (node) {
     this.data = this.data.concat(node.data.map(node => {
         if (node.type === 'STRING_LITERAL') {
-            return [this.asciiEncodeString(this.escapeString(node.value)), 'String'];
+            return { value: this.asciiEncodeString(this.escapeString(node.value)), type: 'String' };
         } else {
-            return [node.value, 'Number'];
+            return { value: node.value, type: 'Number' };
         }
     }));
 };

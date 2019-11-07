@@ -59,35 +59,14 @@ Interpreter.prototype.getArrayDimensions = function (numDimensions) {
     let dimensions = new Array(numDimensions);
     for (let i = 0; i < numDimensions; i++) {
         const dimension = this.valuesStackPeek(numDimensions - 1 - i);
-        if (dimension[1] !== 'Number') {
+        if (dimension.type !== 'Number') {
             this.throwError('OnlyNumericalIndicesAllowedForArrays');
         }
         // ~~? 2.64: TODO, 2.66: TODO 
-        dimensions[i] = ~~dimension[0];
+        dimensions[i] = ~~dimension.value;
     }
     this.valuesStackLength -= numDimensions;
     return dimensions;
-
-    // let dimensions = new Array(numDimensions);
-    // let newValuesStackLength = this.valuesStack.length - numDimensions;
-    // for (let i = 0; i < numDimensions; i++) {
-    //     const dimension = this.valuesStack[i + newValuesStackLength];
-    //     if (dimension[1] !== 'Number') {
-    //         this.throwError('OnlyNumericalIndicesAllowedForArrays');
-    //     }
-    //     dimensions[i] = ~~dimension[0];
-    // }
-    // this.valuesStack.length = newValuesStackLength;
-    // return dimensions;
-
-
-    // return this.valuesStack.splice(this.valuesStack.length - numDimensions).map(dimension => {
-    //     if (dimension[1] !== 'Number') {
-    //         this.throwError('OnlyNumericalIndicesAllowedForArrays');
-    //     }
-    //     return ~~dimension[0]
-    //     return this.numberToInt(dimension[0]);
-    // });
 };
 
 //////////////////
@@ -129,8 +108,7 @@ Interpreter.prototype.instructionLOAD_ARRAY_REFERENCE = function (name, type) {
         this.throwError('ArrayNotDefined', name);
     }
 
-    // this.valuesStack.push([this.arrays[arrayName], type]);
-    this.valuesStackPush([this.arrays[arrayName], type]);
+    this.valuesStackPush({ value: this.arrays[arrayName], type });
 };
 
 Interpreter.prototype.instructionCALL_ARRAY = function (name, numArguments, isUsedAsArgument) {
@@ -159,8 +137,7 @@ Interpreter.prototype.instructionCALL_ARRAY = function (name, numArguments, isUs
 
 Interpreter.prototype.instructionCALL_ARRAY_PUSH_INDICES = function (name, numArguments) {
     for (let i = 0; i < numArguments; i++) {
-        // this.valuesStack.push(this.valuesStack[this.valuesStack.length - numArguments].slice());
-        this.valuesStackPush(this.valuesStackPeek(numArguments - 1).slice());
+        this.valuesStackPush({ ...this.valuesStackPeek(numArguments - 1) });
     }
 
     this.instructionCALL_ARRAY(name, numArguments);

@@ -1,11 +1,11 @@
 'use strict';
 
 Interpreter.prototype.queueMessage = function (type, stringName, ...parameters) {
-    this.errorQueue.push([
+    this.errorQueue.push({
         type,
-        this.instructions[this.programCounter - 1].line,
-        this.strings.get(stringName, ...parameters),
-    ]);
+        line: this.instructions[this.programCounter - 1].line,
+        message: this.strings.get(stringName, ...parameters),
+    });
 };
 
 Interpreter.prototype.queueWarning = function (stringName, ...parameters) {
@@ -53,40 +53,7 @@ Interpreter.prototype.valuesStackPush = function (value) {
 };
 
 Interpreter.prototype.popValue = function () {
-    return this.valuesStackPop()[0];
-    // return this.valuesStack.pop()[0];
-};
-
-Interpreter.prototype.popStringOrNumber = function () {
-    const value = this.valuesStackPop();
-    // const value = this.valuesStack.pop();
-    if (value[1] !== 'Number' && value[1] !== 'String') {
-        const expected = this.strings.get('AString') + this.strings.get('Or') + this.strings.get('ANumber');
-        return this.queueExpectedButFoundError(expected, value[1])[0];
-    }
-    return value[0];
-};
-
-Interpreter.prototype.popStringOrNumberWithType = function () {
-    const value = this.valuesStackPop();
-    // const value = this.valuesStack.pop();
-    if (value[1] === 'StringArray') {
-        return this.queueExpectedButFoundError(this.strings.get('AString'), value[1]);
-    } else if (value[1] === 'NumericArray') {
-        return this.queueExpectedButFoundError(this.strings.get('ANumber'), value[1]);
-    } else {
-        return value;
-    }
-};
-
-Interpreter.prototype.popString = function () {
-    const value = this.valuesStackPop();
-    // const value = this.valuesStack.pop();
-    if (value[1] !== 'String') {
-        return this.queueExpectedButFoundError(this.strings.get('AString'), value[1])[0];
-    } else {
-        return value[0];
-    }
+    return this.valuesStackPop().value;
 };
 
 Interpreter.prototype.queueExpectedButFoundError = function (expected, found) {
@@ -110,42 +77,73 @@ Interpreter.prototype.queueExpectedButFoundError = function (expected, found) {
     }
     this.queueError('InternalErrorExpectedButFound', expected, found);
     return this.valuesStackPeek();
-    // return this.valuesStack[this.valuesStack.length - 1];
+};
+
+Interpreter.prototype.popStringOrNumber = function () {
+    const value = this.valuesStackPop();
+
+    if (value.type === 'Number' || value.type === 'String') {
+        return value.value;
+    }
+
+    const expected = this.strings.get('AString') + this.strings.get('Or') + this.strings.get('ANumber');
+    return this.queueExpectedButFoundError(expected, value.type).value;
+};
+
+Interpreter.prototype.popStringOrNumberWithType = function () {
+    const value = this.valuesStackPop();
+
+    if (value.type === 'Number' || value.type === 'String') {
+        return value;
+    }
+
+    if (value.type === 'StringArray') {
+        return this.queueExpectedButFoundError(this.strings.get('AString'), value.type);
+    }
+
+    if (value.type === 'NumericArray') {
+        return this.queueExpectedButFoundError(this.strings.get('ANumber'), value.type);
+    }
+};
+
+Interpreter.prototype.popString = function () {
+    const value = this.valuesStackPop();
+
+    if (value.type === 'String') {
+        return value.value;
+    }
+
+    return this.queueExpectedButFoundError(this.strings.get('AString'), value.type).value;
 };
 
 Interpreter.prototype.popNumber = function () {
     const value = this.valuesStackPop();
-    // const value = this.valuesStack.pop();
-    if (value[1] !== 'Number') {
-        return this.queueExpectedButFoundError(this.strings.get('ANumber'), value[1])[0];
-    } else {
-        return value[0];
+
+    if (value.type === 'Number') {
+        return value.value;
     }
+    
+    return this.queueExpectedButFoundError(this.strings.get('ANumber'), value.type).value;
 };
 
 Interpreter.prototype.pushString = function (value) {
-    // this.valuesStack.push([value, 'String']);
-    this.valuesStackPush([value, 'String']);
+    this.valuesStackPush({ value, type: 'String' });
 };
 
 Interpreter.prototype.pushNumber = function (value) {
-    // this.valuesStack.push([value, 'Number']);
-    this.valuesStackPush([value, 'Number']);
+    this.valuesStackPush({ value, type: 'Number' });
 };
 
 Interpreter.prototype.pushBoolean = function (value) {
-    // this.valuesStack.push([value, 'Boolean']);
-    this.valuesStackPush([value, 'Boolean']);
+    this.valuesStackPush({ value, type: 'Boolean' });
 };
 
 Interpreter.prototype.pushStringArray = function (value) {
-    // this.valuesStack.push([value, 'StringArray']);
-    this.valuesStackPush([value, 'StringArray']);
+    this.valuesStackPush({ value, type: 'StringArray' });
 };
 
 Interpreter.prototype.pushNumericArray = function (value) {
-    // this.valuesStack.push([value, 'NumericArray']);
-    this.valuesStackPush([value, 'NumericArray']);
+    this.valuesStackPush({ value, type: 'NumericArray' });
 };
 
 Interpreter.prototype.scopeVariableName = function (name) {

@@ -22,11 +22,12 @@ class Parser {
             this.dataLabels = {};
             this.documentation = [''];
 
-            this.symbolTable = new SymbolTable();
-            this.symbolTable.stringVariables = [];
-            this.symbolTable.numericVariables = ['numparams', 'PI', 'pi', 'EULER', 'euler'];
-            this.symbolTable.stringFunctionsAndArrays = ['docu$'];
-            this.symbolTable.numericFunctionsAndArrays = [];
+            this.symbolTable = {
+                stringVariables: [],
+                numericVariables: ['numparams', 'PI', 'pi', 'EULER', 'euler'],
+                stringFunctionsAndArrays: ['docu$'],
+                numericFunctionsAndArrays: [],
+            };
         }
 
         const abstractSyntaxTree = this.parser.parse(source, {
@@ -41,10 +42,7 @@ class Parser {
             onAbstractSyntaxTreeCreated(abstractSyntaxTree);
         }
 
-        console.log('symbolTableStringVariables', this.symbolTable.stringVariables);
-        console.log('symbolTableNumericVariables', this.symbolTable.numericVariables);
-        console.log('symbolTableStringFunctionsAndArrays', this.symbolTable.stringFunctionsAndArrays);
-        console.log('symbolTableNumericFunctionsAndArrays', this.symbolTable.numericFunctionsAndArrays);
+        console.log('symbolTable', this.symbolTable);
 
         this.evaluateNode(abstractSyntaxTree);
 
@@ -82,7 +80,7 @@ class Parser {
     }
 
     addInstruction(...instruction) {
-        this.instructions.push({ line: instruction[0], type: 'instruction' + instruction[1], arguments: instruction.slice(2)});
+        this.instructions.push({ line: instruction[0], type: 'instruction' + instruction[1], arguments: instruction.slice(2) });
     }
 
     addInstructionPlaceholder() {
@@ -90,7 +88,7 @@ class Parser {
     }
 
     insertInstruction(index, ...instruction) {
-        this.instructions[index] = { line: instruction[0], type: 'instruction' + instruction[1], arguments: instruction.slice(2)};
+        this.instructions[index] = { line: instruction[0], type: 'instruction' + instruction[1], arguments: instruction.slice(2) };
     }
 
     escapeString(string) {

@@ -3,7 +3,6 @@
 importScripts(
     'plugins/peg.js',
 
-    'SymbolTable.js',
     'AsciiTable.js',
 
     'parser/Parser.js',

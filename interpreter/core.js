@@ -6,7 +6,6 @@
 
 Interpreter.prototype.instructionPOP = function () {
     this.valuesStackPop();
-    // this.valuesStack.pop();
 };
 
 Interpreter.prototype.instructionJUMP = function (destination) {
@@ -170,40 +169,40 @@ Interpreter.prototype.instructionERROR = function () {
 Interpreter.prototype.instructionPOKE = function () {
     const value = this.popStringOrNumberWithType();
 
-    switch (this.popStringOrNumberWithType()[0].toLowerCase()) {
+    switch (this.popStringOrNumberWithType().value.toLowerCase()) {
         case 'dump':
-            if (value[0] === 'symbols') {
+            if (value.value === 'symbols') {
                 // TODO
                 return;
             }
         case 'read_controls':
-            if (value[1] === 'Number') {
-                this.readControls = !!value[0];
+            if (value.type === 'Number') {
+                this.readControls = !!value.value;
                 return;
             }
         case 'fontheight':
-            if (value[1] === 'Number') {
+            if (value.type === 'Number') {
                 // numberToInt? 2.64: TODO, 2.66: yes 
-                this.fontHeight = this.numberToInt(value[0]);
+                this.fontHeight = this.numberToInt(value.value);
                 return;
             }
         case 'textalign':
-            if (value[1] === 'String') {
-                this.textAlign = this.getTextAlignment(value[0]);
+            if (value.type === 'String') {
+                this.textAlign = this.getTextAlignment(value.value);
                 return;
             }
         case 'windoworigin':
-            if (value[1] === 'String') {
-                this.setWindowOrigin(value[0]);
+            if (value.type === 'String') {
+                this.setWindowOrigin(value.value);
                 return;
             }
         case 'font':
-            if (value[1] === 'String') {
-                this.font = value[0];
+            if (value.type === 'String') {
+                this.font = value.value;
                 return;
             }
         case 'stdout':
-            if (value[1] === 'String') {
+            if (value.type === 'String') {
                 return;
             }
     }
@@ -230,7 +229,7 @@ Interpreter.prototype.instructionPEEK$_1 = function () {
             this.pushString(this.windowOrigin);
             return;
         case 'error':
-            this.pushString(this.strings.get(...this.streamError[1]));
+            this.pushString(this.strings.get(...this.streamError.message));
             return;
         case 'font':
             this.pushString(this.font);
@@ -280,7 +279,7 @@ Interpreter.prototype.instructionPEEK = function () {
             this.pushNumber(this.screenHeight);
             return;
         case 'error':
-            this.pushNumber(this.streamError[0]);
+            this.pushNumber(this.streamError.id);
             return;
         case 'argument':
             this.pushNumber(0);
@@ -296,8 +295,8 @@ Interpreter.prototype.instructionWAIT = function () {
         this.waitStartTime = now;
     }
 
-    // if (now >= this.waitStartTime + 1000 * this.valuesStack[this.valuesStack.length - 1][0]) {
-    if (now >= this.waitStartTime + 1000 * this.valuesStackPeek()[0]) {
+    // TODO: type checking?
+    if (now >= this.waitStartTime + 1000 * this.valuesStackPeek().value) {
         this.waitStartTime = null;
         this.popNumber();
     } else {
@@ -346,11 +345,10 @@ Interpreter.prototype.instructionREAD = function (variableType) {
 
     const data = this.data[this.dataIndex];
 
-    if (data[1] !== variableType) {
+    if (data.type !== variableType) {
         this.throwError('TypeOfReadAndDataDontMatch');
     }
 
-    // this.valuesStack.push(data);
     this.valuesStackPush(data);
 
     this.dataIndex++;

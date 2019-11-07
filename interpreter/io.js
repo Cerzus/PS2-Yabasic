@@ -75,6 +75,7 @@ Interpreter.prototype.instructionCOLOUR = function (numArguments) {
     }
 };
 
+// TODO: check debouncing for keyboard: 0?inkey$(.1):goto 0
 Interpreter.prototype.instructionINKEY$ = function (hasTimeout) {
     const now = Date.now();
     if (this.waitStartTime === null) {
@@ -88,8 +89,7 @@ Interpreter.prototype.instructionINKEY$ = function (hasTimeout) {
             this.popStringOrNumber();
         }
         this.pushString(button);
-    } else if (hasTimeout && now >= this.waitStartTime + 1000 * this.valuesStackPeek()[0]) {
-    // } else if (hasTimeout && now >= this.waitStartTime + 1000 * this.valuesStack[this.valuesStack.length - 1][0]) {
+    } else if (hasTimeout && now >= this.waitStartTime + 1000 * this.valuesStackPeek().value) {
         this.waitStartTime = null;
         this.popStringOrNumber();
         this.pushString('');
@@ -110,16 +110,16 @@ Interpreter.prototype.instructionPRINT = function (using) {
     } else {
         const value = this.popStringOrNumberWithType();
 
-        if (value[1] === 'String') {
-            this.textScreen.print(value[0]);
-        } else if (value[1] === 'Number') {
+        if (value.type === 'String') {
+            this.textScreen.print(value.value);
+        } else if (value.type === 'Number') {
             const prefix = this.previousPrintType === 'Number' ? ' ' : '';
-            const number = value[0];
+            const number = value.value;
             const format = number >= -this.EXP2E31 && number < this.EXP2E31 && Math.abs(number % 1) === 0 ? '%.10g' : '%.6g';
             this.textScreen.print(prefix + this.formatter.toString(number, format));
         }
 
-        this.previousPrintType = value[1];
+        this.previousPrintType = value.type;
     }
 };
 

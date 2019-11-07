@@ -16,7 +16,7 @@ Interpreter.prototype.setStreamError = function (name, ...parameters) {
         '', '', '',
     ]
 
-    this.streamError = [errors.indexOf(name), [name, ...parameters]];
+    this.streamError = { id: errors.indexOf(name), message: arguments };
 };
 
 Interpreter.prototype.pushNumberAndSetStreamError = function (number, name, ...parameters) {
@@ -30,12 +30,12 @@ Interpreter.prototype.pushBooleanAndSetStreamError = function (boolean, name, ..
 };
 
 Interpreter.prototype.pushNumberAndResetStreamError = function (number) {
-    this.streamError[0] = 0;
+    this.streamError.id = 0;
     this.pushNumber(number);
 };
 
 Interpreter.prototype.pushBooleanAndResetStreamError = function (boolean) {
-    this.streamError[0] = 0;
+    this.streamError.id = 0;
     this.pushBoolean(boolean);
 };
 
@@ -99,9 +99,9 @@ Interpreter.prototype.instructionPOKE_STREAM = function () {
     if (stream !== null) {
         if (!this.streams[stream - 1]) {
             this.throwError('StreamNotOpenForWriting', stream);
-        } else if (value[1] === 'Number') {
+        } else if (value.type === 'Number') {
             // ~~? 2.64: TODO, 2.66: TODO 
-            const byte = ~~value[0];
+            const byte = ~~value.value;
             if (byte < 0 || byte > 255) {
                 this.throwError('StreamPokeOutOfByteRange');
             }
@@ -150,7 +150,7 @@ Interpreter.prototype.instructionSEEK = function (hasMode) {
         if (this.version < 2.65) {
             this.throwError('SeekModeIsNeither', mode);
         } else {
-            this.throwError(...this.streamError[1]);
+            this.throwError(...this.streamError.message);
         }
     } else if (stream < 1 || stream > 16) {
         this.throwError('CanOnlyHandleStreamsFromTo', 16);
@@ -158,13 +158,13 @@ Interpreter.prototype.instructionSEEK = function (hasMode) {
         if (this.version < 2.65) {
             this.throwError('StreamNotOpened', stream);
         } else {
-            this.throwError(...this.streamError[1]);
+            this.throwError(...this.streamError.message);
         }
     } else {
         if (this.version < 2.65) {
             this.throwError('CouldNotPositionStreamTo', stream, position);
         } else {
-            this.throwError(...this.streamError[1]);
+            this.throwError(...this.streamError.message);
         }
     }
 };
@@ -176,15 +176,15 @@ Interpreter.prototype.instructionSEEK_BOOLEAN = function (hasMode) {
     // ~~? 2.64: TODO, 2.66: TODO 
     const stream = ~~this.popNumber();
     if (!/^(begin|end|here)$/.test(mode)) {
-        this.streamError[0] = 12;
+        this.streamError.id = 12;
         this.pushBoolean(false);
     } else if (stream < 1 || stream > 16) {
         this.throwError('CanOnlyHandleStreamsFromTo', 16);
     } else if (!this.streams[stream - 1]) {
-        this.streamError[0] = 11;
+        this.streamError.id = 11;
         this.pushBoolean(false);
     } else {
-        this.streamError[0] = 10;
+        this.streamError.id = 10;
         this.pushBoolean(false);
     }
 };
@@ -193,7 +193,7 @@ Interpreter.prototype.instructionOPEN_PRINTER = function () {
     const stream = this.popStreamForUseOrThrowError();
     if (stream !== null) {
         this.streams[stream - 1] = true;
-        this.streamError[0] = 0;
+        this.streamError.id = 0;
     }
 };
 
