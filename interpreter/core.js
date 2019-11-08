@@ -77,15 +77,14 @@ Interpreter.prototype.instructionCOMPILE = function () {
     if (this.isWaitingForRuntimeCompilation) {
         if (this.runtimeCompiledSource === null) {
             this.programCounter--;
-        } else {
+        } else { // TODO: fix for symbol table
             // TODO: check whether completely replacing everything should or could be done more efficiently
-            this.subroutines = this.runtimeCompiledSource.subroutines;
             this.instructions = this.runtimeCompiledSource.instructions;
             this.instructionLabels = this.runtimeCompiledSource.instructionLabels;
             this.data = this.runtimeCompiledSource.data;
             this.dataLabels = this.runtimeCompiledSource.dataLabels;
 
-            console.log(this.instructions);
+            this.logInstructions();
 
             this.isWaitingForRuntimeCompilation = false;
             this.runtimeCompiledSource = null;
@@ -314,11 +313,12 @@ Interpreter.prototype.instructionBELL = function () {
     // }
 };
 
-Interpreter.prototype.instructionCALL_FUNCTION_OR_ARRAY = function (name, numArguments, isUsedAsArgument) {
-    if (name in this.subroutines) {
+Interpreter.prototype.instructionCALL_FUNCTION_OR_ARRAY = function (name, numArguments) {
+    const subroutineOrArray = this.symbolStack.globalSubroutinesAndArrays[name];
+    if (subroutineOrArray !== undefined && subroutineOrArray.address) { // TODO: is this correct?
         this.instructionCALL_FUNCTION(name, numArguments);
     } else {
-        this.instructionLOAD_ARRAY_ELEMENT(name, numArguments, isUsedAsArgument);
+        this.instructionCALL_ARRAY(name, numArguments);
     }
 };
 

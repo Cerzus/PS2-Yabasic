@@ -54,7 +54,7 @@ Parser.prototype.evaluateEXECUTE_STATEMENT = function (node) {
 
 Parser.prototype.evaluateFUNCTION_OR_ARRAY_STATEMENT = function (node) {
     this.evaluateArgumentNodes(node.arguments);
-    this.addInstruction(node.line, 'CALL_FUNCTION', node.name, node.arguments.length);
+    this.addInstruction(node.line, 'CALL_FUNCTION', this.subroutineOrArray(node.name), node.arguments.length);
     this.addInstruction(node.line, 'POP');
 };
 
@@ -94,8 +94,8 @@ Parser.prototype.evaluateSUBROUTINE_STATEMENT = function (node) {
                 break;
             case 'STRING_ARRAY':
             case 'NUMERIC_ARRAY':
-                this.addInstruction(parameter.line, 'LOCAL_ARRAY', parameter.name);
-                this.addInstruction(parameter.line, 'STORE_ARRAY', parameter.name);
+                this.addInstruction(parameter.line, 'LOCAL_ARRAY_REFERENCE', this.subroutineOrArray(parameter.name));
+                this.addInstruction(parameter.line, 'STORE_ARRAY_REFERENCE', this.subroutineOrArray(parameter.name));
                 break;
         }
     }
@@ -117,38 +117,38 @@ Parser.prototype.evaluateRETURN_STATEMENT = function (node) {
 };
 
 Parser.prototype.evaluateLOCAL_STATEMENT = function (node) {
-    for (let variable of node.variables) {
-        switch (variable.type) {
+    for (let item of node.items) {
+        switch (item.type) {
             case 'STRING_VARIABLE':
-                this.addInstruction(variable.line, 'LOCAL_STRING_VARIABLE', this.stringVariable(variable.name));
+                this.addInstruction(item.line, 'LOCAL_STRING_VARIABLE', this.stringVariable(item.name));
                 break;
             case 'NUMERIC_VARIABLE':
             case 'NUMPARAMS':
-                this.addInstruction(variable.line, 'LOCAL_NUMERIC_VARIABLE', this.numericVariable(variable.name));
+                this.addInstruction(item.line, 'LOCAL_NUMERIC_VARIABLE', this.numericVariable(item.name));
                 break;
             case 'STRING_FUNCTION_OR_ARRAY':
             case 'NUMERIC_FUNCTION_OR_ARRAY':
-                this.evaluateArgumentNodes(variable.arguments);
-                this.addInstruction(variable.line, 'LOCAL_ARRAY_DIM', variable.name, variable.arguments.length);
+                this.evaluateArgumentNodes(item.arguments);
+                this.addInstruction(item.line, 'LOCAL_ARRAY', this.subroutineOrArray(item.name), item.arguments.length);
                 break;
         }
     }
 };
 
 Parser.prototype.evaluateSTATIC_STATEMENT = function (node) {
-    for (let variable of node.variables) {
-        switch (variable.type) {
+    for (let item of node.items) {
+        switch (item.type) {
             case 'STRING_VARIABLE':
-                this.addInstruction(variable.line, 'STATIC_STRING_VARIABLE', this.stringVariable(variable.name));
+                this.addInstruction(item.line, 'STATIC_STRING_VARIABLE', this.stringVariable(item.name));
                 break;
             case 'NUMERIC_VARIABLE':
             case 'NUMPARAMS':
-                this.addInstruction(variable.line, 'STATIC_NUMERIC_VARIABLE', this.numericVariable(variable.name));
+                this.addInstruction(item.line, 'STATIC_NUMERIC_VARIABLE', this.numericVariable(item.name));
                 break;
             case 'STRING_FUNCTION_OR_ARRAY':
             case 'NUMERIC_FUNCTION_OR_ARRAY':
-                this.evaluateArgumentNodes(variable.arguments);
-                this.addInstruction(variable.line, 'STATIC_ARRAY_DIM', variable.name, variable.arguments.length);
+                this.evaluateArgumentNodes(item.arguments);
+                this.addInstruction(item.line, 'STATIC_ARRAY', this.subroutineOrArray(item.name), item.arguments.length);
                 break;
         }
     }

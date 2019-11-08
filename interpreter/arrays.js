@@ -4,42 +4,28 @@
 // UTILITY FUNCTIONS //
 ///////////////////////
 
-Interpreter.prototype.scopeArrayName = function (name) {
-    if (this.localArrays.indexOf(name) >= 0) {
-        return this.localScopeName(name);
-    }
-
-    if (this.staticArrays.indexOf(name) >= 0) {
-        return this.staticScopeName(name);
-    }
-
-    return name;
-};
-
-Interpreter.prototype.getArrayIndex = function (arrayName, numDimensions) {
-    // const name = arrayName.split('/').pop();
-    const name = arrayName.substring(arrayName.indexOf('/') + 1);
-
+Interpreter.prototype.getArrayIndex = function (name, numDimensions) {
     if (numDimensions === 0) {
         const expected = this.strings.get('Nothing');
-        const found = name.endsWith('$') ? this.strings.get('AString') : this.strings.get('ANumber');
+        const found = this.getRealSubroutineOrArrayName(name).endsWith('$') ? this.strings.get('AString') : this.strings.get('ANumber');
         this.throwFatalError('InternalErrorExpectedButFound', expected, found);
     }
 
-    const array = this.arrays[arrayName];
-
-    let dimensions = this.getArrayDimensions(numDimensions);
+    const array = this.symbolStack.getArrayStore(name)[name];
 
     if (array.dimensions === null || array.dimensions.length === 0) {
-        this.throwError('ArrayParameterHasNotBeenSupplied', name);
+        this.throwError('ArrayParameterHasNotBeenSupplied', this.getRealSubroutineOrArrayName(name));
     }
-
+    
     if (numDimensions !== array.dimensions.length) {
-        this.throwError('IndicesSuppliedExpectedFor', numDimensions, array.dimensions.length, name);
+        this.throwError('IndicesSuppliedExpectedFor', numDimensions, array.dimensions.length, this.getRealSubroutineOrArrayName(name));
     }
+    
+    const dimensions = this.getArrayDimensions(numDimensions);
 
     for (let i = 0; i < dimensions.length; i++) {
         const dimension = dimensions[i];
+
         if (dimension < 0 || dimension >= array.dimensions[i]) {
             this.throwError('IndexOutOfRange', i + 1, dimension);
         }
@@ -56,7 +42,8 @@ Interpreter.prototype.getArrayIndex = function (arrayName, numDimensions) {
 };
 
 Interpreter.prototype.getArrayDimensions = function (numDimensions) {
-    let dimensions = new Array(numDimensions);
+    const dimensions = [];
+
     for (let i = 0; i < numDimensions; i++) {
         const dimension = this.valuesStackPeek(numDimensions - 1 - i);
         if (dimension.type !== 'Number') {
@@ -66,6 +53,7 @@ Interpreter.prototype.getArrayDimensions = function (numDimensions) {
         dimensions[i] = ~~dimension.value;
     }
     this.valuesStackLength -= numDimensions;
+
     return dimensions;
 };
 
@@ -74,78 +62,79 @@ Interpreter.prototype.getArrayDimensions = function (numDimensions) {
 //////////////////
 
 Interpreter.prototype.instructionSTORE_ARRAY_ELEMENT = function (name, numArguments) {
-    const arrayName = this.scopeArrayName(name);
+    const array = this.symbolStack.getArrayStore(name)[name];
 
-    if (!(arrayName in this.arrays)) {
-        this.throwError('IsNeitherArrayNorSubroutine', name);
+    if (array === undefined) { // TODO: check when a subroutine with the same name has been defined
+        this.throwError('IsNeitherArrayNorSubroutine', this.getRealSubroutineOrArrayName(name));
     }
 
     const value = this.popStringOrNumber();
-    const index = this.getArrayIndex(arrayName, numArguments);
+    const index = this.getArrayIndex(name, numArguments);
 
-    this.arrays[arrayName].values[index] = value;
+    array.values[index] = value;
 };
 
-Interpreter.prototype.instructionSTORE_ARRAY = function (arrayName) {
+Interpreter.prototype.instructionSTORE_ARRAY_REFERENCE = function (arrayName) {
     const value = this.popValue();
-    const name = this.scopeArrayName(arrayName);
 
-    if (!(name in this.arrays) || this.arrays[name].dimensions !== null) {
-        this.arrays[name] = value;
+    const store = this.symbolStack.getArrayStore(arrayName);
+    const array = store[arrayName];
+
+    if (array === undefined || array.dimensions !== null) { // TODO: check if a subroutine with the same name gives conflicts
+        store[arrayName] = value;
     }
 
-    if (!(arrayName in this.arrayReferenceParameters)/* && value.dimensions !== null*/) {
-        this.arrayReferenceParameters[arrayName] = [value, value];
-    } else if (arrayName in this.arrayReferenceParameters) {
-        this.arrayReferenceParameters[arrayName][0] = value;
-    }
+    // if (!(arrayName in this.arrayReferenceParameters)/* && value.dimensions !== null*/) {
+    //     this.arrayReferenceParameters[arrayName] = [value, value];
+    // } else if (arrayName in this.arrayReferenceParameters) {
+    //     this.arrayReferenceParameters[arrayName][0] = value;
+    // }
 };
 
-Interpreter.prototype.instructionLOAD_ARRAY = function (name, type) {
-    const arrayName = this.scopeArrayName(name);
+Interpreter.prototype.instructionLOAD_ARRAY_REFERENCE = function (name, type) {
+    const array = this.symbolStack.getArrayStore(name)[name];
 
-    if (!(arrayName in this.arrays)) {
-        this.throwError('ArrayNotDefined', name);
+    if (array === undefined) { // TODO: check when a subroutine with the same name has been defined
+        this.throwError('ArrayNotDefined', this.getRealSubroutineOrArrayName(name));
     }
 
-    this.valuesStackPush({ value: this.arrays[arrayName], type });
+    this.valuesStackPush({ value: array, type });
 };
 
-Interpreter.prototype.instructionLOAD_ARRAY_ELEMENT = function (name, numArguments, isUsedAsArgument) {
-    const arrayName = this.scopeArrayName(name);
+Interpreter.prototype.instructionCALL_ARRAY = function (name, numArguments) {
+    const array = this.symbolStack.getArrayStore(name)[name];
 
-    if (!(arrayName in this.arrays)) {
-        this.throwError('IsNeitherArrayNorSubroutine', name);
+    if (array === undefined) { // TODO: check when a subroutine with the same name has been defined
+        this.throwError('IsNeitherArrayNorSubroutine', this.getRealSubroutineOrArrayName(name));
     }
 
     if (numArguments === 0) {
-        // if (isUsedAsArgument) {
-        this.instructionLOAD_ARRAY(name, name.endsWith('$') ? 'StringArray' : 'NumericArray');
-        // } else {
-        // this.throwError(`expected a ${name.endsWith('$') ? 'string' : 'number'} but found a reference to a ${name.endsWith('$') ? 'string' : 'numeric'} array`);
-        // }
+        this.instructionLOAD_ARRAY_REFERENCE(name, this.getRealSubroutineOrArrayName(name).endsWith('$') ? 'StringArray' : 'NumericArray');
     } else {
-        const index = this.getArrayIndex(arrayName, numArguments); // keep on separate line
+        const index = this.getArrayIndex(name, numArguments); // keep on separate line
 
-        if (name.endsWith('$')) {
-            this.pushString(this.arrays[arrayName].values[index]);
+        if (this.getRealSubroutineOrArrayName(name).endsWith('$')) {
+            this.pushString(array.values[index]);
         } else {
-            this.pushNumber(this.arrays[arrayName].values[index]);
+            this.pushNumber(array.values[index]);
         }
     }
 };
 
-Interpreter.prototype.instructionLOAD_ARRAY_ELEMENT_PUSH_INDICES = function (name, numArguments) {
+Interpreter.prototype.instructionCALL_ARRAY_PUSH_INDICES = function (name, numArguments) {
     for (let i = 0; i < numArguments; i++) {
         this.valuesStackPush({ ...this.valuesStackPeek(numArguments - 1) });
     }
 
-    this.instructionLOAD_ARRAY_ELEMENT(name, numArguments);
+    this.instructionCALL_ARRAY(name, numArguments);
 };
 
 Interpreter.prototype.instructionDIM = function (name, numDimensions) {
-    if (name in this.subroutines) {
-        this.throwError('ArrayConflictsWithUserSubroutine', name);
+    const store = this.symbolStack.getArrayStore(name);
+    const array = store[name];
+
+    if (array !== undefined && array.address) {
+        this.throwError('ArrayConflictsWithUserSubroutine', this.getRealSubroutineOrArrayName(name));
     }
 
     let dimensions = this.getArrayDimensions(numDimensions);
@@ -164,31 +153,29 @@ Interpreter.prototype.instructionDIM = function (name, numDimensions) {
         this.throwError('ArrayHasMoreThan10Dimensions');
     }
 
-    const defaultValue = name.endsWith('$') ? '' : 0;
-
-    const arrayName = this.scopeArrayName(name);
-
     // if the array already exists, the number of dimensions must be the the same and the dimensions cannot shrink
-    if (arrayName in this.arrays) {
-        if (this.arrays[arrayName].dimensions === null || numDimensions !== this.arrays[arrayName].dimensions.length) {
-            this.throwError('CannotChangeDimensionsOfFromTo', name, (this.arrays[arrayName].dimensions || []).length, numDimensions);
+    if (array !== undefined) {
+        if (array.dimensions === null || numDimensions !== array.dimensions.length) {
+            this.throwError('CannotChangeDimensionsOfFromTo', this.getRealSubroutineOrArrayName(name), (array.dimensions || []).length, numDimensions);
         }
 
-        dimensions = dimensions.map((dimension, i) => Math.max(dimension, this.arrays[arrayName].dimensions[i]));
+        dimensions = dimensions.map((dimension, i) => Math.max(dimension, array.dimensions[i]));
     }
 
     // multiply all dimensions together to get the total number of elements
     const numberOfElements = dimensions.length > 0 ? dimensions.reduce((acc, curr) => acc * curr) : 0;
-
+    
     // TODO: check better
-    if (numberOfElements > (arrayName.endsWith('$') ? 100000 : 1000000)) {
+    // if (numberOfElements > (arrayName.endsWith('$') ? 100000 : 1000000)) {
+        if (numberOfElements > (this.getRealSubroutineOrArrayName(name).endsWith('$') ? 100000 : 1000000)) {
         this.throwFatalError('OutOfMemory');
     }
+    
+    const defaultValue = this.getRealSubroutineOrArrayName(name).endsWith('$') ? '' : 0;
 
     // if the array already exsists, copy the old values and fill the rest with default values
     // make sure not to replace the values or dimensions arrays, so local and static array reference will stay linked
-    if (arrayName in this.arrays && this.arrays[arrayName].dimensions !== null) {
-        const array = this.arrays[arrayName];
+    if (array !== undefined && array.dimensions !== null) {
         const oldValues = array.values.slice();
         const oldDimensions = array.dimensions.slice();
 
@@ -240,7 +227,7 @@ Interpreter.prototype.instructionDIM = function (name, numDimensions) {
     }
     // ...otherwise, completely fill the array with default values
     else {
-        this.arrays[arrayName] = {
+        store[name] = {
             dimensions,
             values: new Array(numberOfElements).fill(defaultValue),
         };

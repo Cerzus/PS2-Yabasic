@@ -109,10 +109,10 @@ Parser.prototype.evaluateNUMERIC_VARIABLE = function (node) {
 };
 
 Parser.prototype.evaluateSTRING_ARRAY = function (node) {
-    this.addInstruction(node.line, 'LOAD_STRING_ARRAY_REFERENCE', this.array(node.name));
+    this.addInstruction(node.line, 'LOAD_ARRAY_REFERENCE', this.subroutineOrArray(node.name));
 };
 
 Parser.prototype.evaluateNUMERIC_ARRAY = function (node) {
-    this.addInstruction(node.line, 'LOAD_NUMERIC_ARRAY_REFERENCE', this.array(node.name));
+    this.addInstruction(node.line, 'LOAD_ARRAY_REFERENCE', this.subroutineOrArray(node.name));
 };
 

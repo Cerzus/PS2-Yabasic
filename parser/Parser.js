@@ -62,11 +62,7 @@ class Parser {
 
     evaluateArgumentNodes(nodes) {
         for (let node of nodes) {
-            if (node.type === 'NUMERIC_FUNCTION_OR_ARRAY' || node.type === 'STRING_FUNCTION_OR_ARRAY') {
-                this['evaluate' + node.type](node, true); // true => the function or array is passed as an argument
-            } else {
-                this.evaluateNode(node);
-            }
+            this.evaluateNode(node);
         }
     }
 
@@ -134,5 +130,9 @@ class Parser {
 
     numericVariable(variableName) {
         return this.symbolTable.numericVariables.indexOf(variableName);
+    }
+
+    subroutineOrArray(subroutineOrArrayName) {
+        return this.symbolTable.subroutinesAndArrays.indexOf(subroutineOrArrayName);
     }
 }

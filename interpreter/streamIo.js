@@ -4,7 +4,7 @@
 // UTILITY FUNCTIONS //
 ///////////////////////
 
-Interpreter.prototype.setStreamError = function (name, ...parameters) {
+Interpreter.prototype.setStreamError = function (name) {
     const errors = [
         '', '',
         'StreamAlreadyInUse',

@@ -98,20 +98,20 @@ Parser.prototype.evaluateWAIT_STATEMENT = function (node) {
     this.addInstruction(node.line, 'WAIT');
 };
 
-Parser.prototype.evaluateNUMERIC_FUNCTION_OR_ARRAY = function (node, isUsedAsArgument) {
+Parser.prototype.evaluateNUMERIC_FUNCTION_OR_ARRAY = function (node) {
     this.evaluateArgumentNodes(node.arguments);
-    this.addInstruction(node.line, 'CALL_FUNCTION_OR_ARRAY', node.name, node.arguments.length, isUsedAsArgument);
+    this.addInstruction(node.line, 'CALL_FUNCTION_OR_ARRAY', this.subroutineOrArray(node.name), node.arguments.length);
 };
 
-Parser.prototype.evaluateSTRING_FUNCTION_OR_ARRAY = function (node, isUsedAsArgument) {
+Parser.prototype.evaluateSTRING_FUNCTION_OR_ARRAY = function (node,) {
     this.evaluateArgumentNodes(node.arguments);
-    this.addInstruction(node.line, 'CALL_FUNCTION_OR_ARRAY', node.name, node.arguments.length, isUsedAsArgument);
+    this.addInstruction(node.line, 'CALL_FUNCTION_OR_ARRAY', this.subroutineOrArray(node.name), node.arguments.length);
 };
 
 Parser.prototype.evaluateARRAY_DIMENSIONS_STATEMENT = function (node) {
     for (let array of node.arrays) {
         this.evaluateArgumentNodes(array.dimensions);
-        this.addInstruction(node.line, 'DIM', array.name, array.dimensions.length);
+        this.addInstruction(node.line, 'DIM', this.subroutineOrArray(array.name), array.dimensions.length);
     }
 };
 
@@ -130,7 +130,7 @@ Parser.prototype.evaluateASSIGNMENT_STATEMENT = function (node) {
         case 'NUMERIC_FUNCTION_OR_ARRAY':
             this.evaluateArgumentNodes(node.left.arguments);
             this.evaluateNode(node.right);
-            this.addInstruction(node.left.line, 'STORE_ARRAY_ELEMENT', node.left.name, node.left.arguments.length);
+            this.addInstruction(node.left.line, 'STORE_ARRAY_ELEMENT', this.subroutineOrArray(node.left.name), node.left.arguments.length);
             break;
     }
 };
@@ -146,23 +146,23 @@ Parser.prototype.evaluateDATA_STATEMENT = function (node) {
 };
 
 Parser.prototype.evaluateREAD_STATEMENT = function (node) {
-    for (let variable of node.variables) {
+    for (let item of node.items) {
 
-        switch (variable.type) {
+        switch (item.type) {
             case 'STRING_VARIABLE':
-                this.addInstruction(variable.line, 'READ', 'String');
-                this.addInstruction(variable.line, 'STORE_STRING_VARIABLE', this.stringVariable(variable.name));
+                this.addInstruction(item.line, 'READ', 'String');
+                this.addInstruction(item.line, 'STORE_STRING_VARIABLE', this.stringVariable(item.name));
                 break;
             case 'NUMERIC_VARIABLE':
             case 'NUMPARAMS':
-                this.addInstruction(variable.line, 'READ', 'Number');
-                this.addInstruction(variable.line, 'STORE_NUMERIC_VARIABLE', this.numericVariable(variable.name));
+                this.addInstruction(item.line, 'READ', 'Number');
+                this.addInstruction(item.line, 'STORE_NUMERIC_VARIABLE', this.numericVariable(item.name));
                 break;
             case 'STRING_FUNCTION_OR_ARRAY':
             case 'NUMERIC_FUNCTION_OR_ARRAY':
-                this.evaluateArgumentNodes(variable.arguments);
-                this.addInstruction(variable.line, 'READ', variable.name.endsWith('$') ? 'String' : 'Number');
-                this.addInstruction(variable.line, 'STORE_ARRAY_ELEMENT', variable.name, variable.arguments.length);
+                this.evaluateArgumentNodes(item.arguments);
+                this.addInstruction(item.line, 'READ', item.name.endsWith('$') ? 'String' : 'Number');
+                this.addInstruction(item.line, 'STORE_ARRAY_ELEMENT', this.subroutineOrArray(item.name), item.arguments.length);
                 break;
         }
     }

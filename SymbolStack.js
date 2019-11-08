@@ -28,7 +28,7 @@ class SymbolStack {
             const subroutineOrArray = subroutinesAndArrays[name];
 
             // subroutines get symbolstores for static variables and arrays
-            if ('parameters' in subroutineOrArray) {
+            if ('address' in subroutineOrArray) {
                 subroutineOrArray.numericVariables = [];
                 subroutineOrArray.stringVariables = [];
                 subroutineOrArray.arrays = [];
@@ -40,7 +40,7 @@ class SymbolStack {
 
     pushStackFrame(subroutineName) {
         this.stackFrame = this.stackFrames[this.stackFrames.push({
-            subroutine: subroutineName !== null ? this.globalSubroutinesAndArrays[this.symbolTable.subroutinesAndArrays.indexOf(subroutineName)] : null,
+            subroutine: subroutineName !== null ? this.globalSubroutinesAndArrays[subroutineName] : null,
 
             numericVariables: [],
             numericVariablesScope: [],
@@ -101,7 +101,7 @@ class SymbolStack {
     getArrayStore(arrayName) {
         switch (this.arraysScope[arrayName]) {
             case undefined:
-                return this.globalArrays;
+                return this.globalSubroutinesAndArrays;
             case 'LOCAL':
                 return this.localArrays;
             default:

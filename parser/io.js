@@ -94,7 +94,7 @@ Parser.prototype.evaluateINPUT_STATEMENT = function (node) {
             case 'NUMERIC_FUNCTION_OR_ARRAY':
                 this.evaluateArgumentNodes(item.arguments);
                 this.addInstruction(item.line, 'INPUT', node.splitOnSpaces, item.type === 'STRING_FUNCTION_OR_ARRAY');
-                this.addInstruction(item.line, 'STORE_ARRAY', item.name, item.arguments.length);
+                this.addInstruction(item.line, 'STORE_ARRAY_ELEMENT', this.subroutineOrArray(item.name), item.arguments.length);
                 break;
         }
     }

@@ -146,14 +146,6 @@ Interpreter.prototype.pushNumericArray = function (value) {
     this.valuesStackPush({ value, type: 'NumericArray' });
 };
 
-Interpreter.prototype.localScopeName = function (name) {
-    return this.currentSubroutineLevel + '/' + name;
-};
-
-Interpreter.prototype.staticScopeName = function (name) {
-    return this.subroutineName + '/' + name;
-};
-
 Interpreter.prototype.escapeStringForRegExp = function (string) {
     return string.replace(/([\!\$\(\)\*\+\,\-\.\/\:\?\[\\\]\^\{\|\}])/g, '\\$1');
 };
@@ -171,5 +163,9 @@ Interpreter.prototype.splitString = function (string, separator, removeEmptyStri
 Interpreter.prototype.numberToInt = function (number) {
     // ~~? 2.64: TODO, 2.66: TODO 
     return ~~Math.min(Math.max(-this.EXP2E31, number), this.EXP2E31 - 1);
+};
+
+Interpreter.prototype.getRealSubroutineOrArrayName = function (name) {
+    return this.symbolStack.symbolTable.subroutinesAndArrays[name];
 };
 

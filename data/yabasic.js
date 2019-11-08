@@ -940,12 +940,12 @@ FunctionOrArrayStatement
         { return createNode({ type: "FUNCTION_OR_ARRAY_STATEMENT", name: statement.name, arguments: statement.arguments }); }
 
 LocalStatement
-    = LocalToken _ variables:LocalAndStaticList
-        { return createNode({ type: "LOCAL_STATEMENT", variables }); }
+    = LocalToken _ items:LocalAndStaticList
+        { return createNode({ type: "LOCAL_STATEMENT", items }); }
 
 StaticStatement
-    = StaticToken _ variables:LocalAndStaticList
-        { return createNode({ type: "STATIC_STATEMENT", variables }); }
+    = StaticToken _ items:LocalAndStaticList
+        { return createNode({ type: "STATIC_STATEMENT", items }); }
 
 LocalAndStaticList
     = head:LocalAndStaticItem tail:(_ "," _ LocalAndStaticItem)*
@@ -1078,8 +1078,8 @@ InputItem
     = FunctionOrArray / Numparams / Variable
 
 ReadStatement
-    = ReadToken _ variables:ReadList
-        { return createNode({ type: "READ_STATEMENT", variables }); }
+    = ReadToken _ items:ReadList
+        { return createNode({ type: "READ_STATEMENT", items }); }
 
 ReadList
     = head:ReadItem tail:(_ "," _ ReadItem)*

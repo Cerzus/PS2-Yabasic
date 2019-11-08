@@ -55,7 +55,7 @@ Interpreter.prototype.instructionEND = function () {
     this.programCounter = this.instructions.length;
 }
 
-Interpreter.prototype.instructionEXECUTE$ = function (numArguments) {
+Interpreter.prototype.instructionEXECUTE$ = function (numArguments) { // TODO: fix for symbol table
     if (numArguments === 0 || this.valuesStackPeek(numArguments - 1).type !== 'String') {
         this.throwError('NeedStringAsFunctionName');
     }
@@ -71,7 +71,7 @@ Interpreter.prototype.instructionEXECUTE$ = function (numArguments) {
     this.instructionCALL_FUNCTION(name, numArguments - 1);
 }
 
-Interpreter.prototype.instructionEXECUTE = function (numArguments) {
+Interpreter.prototype.instructionEXECUTE = function (numArguments) { // TODO: fix for symbol table
     if (numArguments === 0 || this.valuesStackPeek(numArguments - 1).type !== 'String') {
         this.throwError('NeedStringAsFunctionName');
     }
@@ -89,11 +89,12 @@ Interpreter.prototype.instructionEXECUTE = function (numArguments) {
 
 Interpreter.prototype.instructionCALL_FUNCTION = function (name, numArguments) {
     // if the requested subroutine does not exist, throw an error
-    if (!(name in this.subroutines)) {
-        this.throwError('CantFind', this.strings.get('Subroutine'), name);
+    const subroutine = this.symbolStack.globalSubroutinesAndArrays[name];
+    if (subroutine === undefined) { // TODO: check when an array of the same name has been defined
+        this.throwError('CantFind', this.strings.get('Subroutine'), this.getRealSubroutineOrArrayName(name));
     }
 
-    const parameters = this.subroutines[name].parameters;
+    const parameters = subroutine.parameters;
 
     // check for wrong argument types
     for (let i = 0; i < numArguments; i++) {
@@ -130,19 +131,15 @@ Interpreter.prototype.instructionCALL_FUNCTION = function (name, numArguments) {
         type: 'SUBROUTINE',
         subroutineName: this.subroutineName,
         // this array contains objects containing arrays, any problems with references?
-        arrayReferenceParameters: this.arrayReferenceParameters.slice(),
-        localArrays: this.localArrays.slice(),
-        staticArrays: this.staticArrays.slice(),
+        // arrayReferenceParameters: this.arrayReferenceParameters.slice(),
         programCounter: this.programCounter,
     });
     this.symbolStack.pushStackFrame(name);
 
-    this.subroutineName = name;
-    this.arrayReferenceParameters = [];
-    this.localArrays = [];
-    this.staticArrays = [];
+    this.subroutineName = this.getRealSubroutineOrArrayName(name);
+    // this.arrayReferenceParameters = [];
 
-    this.programCounter = this.subroutines[name].address;
+    this.programCounter = subroutine.address;
 
     this.currentSubroutineLevel++;
 };
@@ -169,28 +166,21 @@ Interpreter.prototype.instructionRETURN = function (hasReturnValue) {
         }
 
         // apply any local and static arrays to the arrays they were passed in as
-        for (let name in this.arrayReferenceParameters) {
-            if (this.staticArrays.indexOf(name) >= 0) {
-                this.arrayReferenceParameters[name][0].dimensions = this.arrays[this.staticScopeName(name)].dimensions
-                this.arrayReferenceParameters[name][0].values = this.arrays[this.staticScopeName(name)].values;
-            } else {
-                this.arrayReferenceParameters[name][0].dimensions = this.arrayReferenceParameters[name][1].dimensions;
-                this.arrayReferenceParameters[name][0].values = this.arrayReferenceParameters[name][1].values;
-            }
-        }
-
-        // delete all local arrays
-        for (let name of this.localArrays) {
-            delete this.arrays[this.scopeArrayName(name)];
-        }
+        // for (let name in this.arrayReferenceParameters) {
+        //     if (this.staticArrays.indexOf(name) >= 0) {
+        //         this.arrayReferenceParameters[name][0].dimensions = this.arrays[this.staticScopeName(name)].dimensions
+        //         this.arrayReferenceParameters[name][0].values = this.arrays[this.staticScopeName(name)].values;
+        //     } else {
+        //         this.arrayReferenceParameters[name][0].dimensions = this.arrayReferenceParameters[name][1].dimensions;
+        //         this.arrayReferenceParameters[name][0].values = this.arrayReferenceParameters[name][1].values;
+        //     }
+        // }
 
         const context = this.callStack.pop();
         this.symbolStack.popStackFrame();
 
         this.subroutineName = context.subroutineName;
-        this.arrayReferenceParameters = context.arrayReferenceParameters;
-        this.localArrays = context.localArrays;
-        this.staticArrays = context.staticArrays;
+        // this.arrayReferenceParameters = context.arrayReferenceParameters;
 
         this.programCounter = context.programCounter;
         this.currentSubroutineLevel--;
@@ -203,38 +193,35 @@ Interpreter.prototype.instructionRETURN = function (hasReturnValue) {
     }
 };
 
-Interpreter.prototype.instructionLOCAL_ARRAY = function (arrayName) {
-    if (this.localArrays.indexOf(arrayName) < 0) {
-        this.localArrays.push(arrayName);
-    }
-    // this.instructionDIM(arrayName, 0);
+Interpreter.prototype.instructionLOCAL_ARRAY_REFERENCE = function (arrayName) {
+    this.symbolStack.arraysScope[arrayName] = 'LOCAL';
 };
 
-Interpreter.prototype.instructionLOCAL_ARRAY_DIM = function (arrayName, numDimensions) {
-    if (this.localArrays.indexOf(arrayName) >= 0 || this.staticArrays.indexOf(arrayName) >= 0) {
-        this.throwError('AlreadyDefinedWithinSub', arrayName);
+Interpreter.prototype.instructionLOCAL_ARRAY = function (arrayName, numDimensions) {
+    if (this.symbolStack.arraysScope[arrayName]) {
+        this.throwError('AlreadyDefinedWithinSub', this.getRealSubroutineOrArrayName(arrayName));
     }
 
-    this.localArrays.push(arrayName);
+    this.symbolStack.arraysScope[arrayName] = 'LOCAL';
+
     this.instructionDIM(arrayName, numDimensions);
 };
 
-Interpreter.prototype.instructionSTATIC_ARRAY_DIM = function (arrayName, numDimensions) {
-    if (this.staticArrays.indexOf(arrayName) < 0) {
-        this.staticArrays.push(arrayName);
-    }
+Interpreter.prototype.instructionSTATIC_ARRAY = function (arrayName, numDimensions) {
+    this.symbolStack.arraysScope[arrayName] = 'STATIC';
 
-    if (this.localArrays.indexOf(arrayName) < 0) {
-        this.instructionDIM(arrayName, numDimensions);
-    } else if (arrayName in this.arrayReferenceParameters) {
-        this.localArrays = this.localArrays.filter(x => x !== arrayName);
-        this.instructionDIM(arrayName, numDimensions);
-        this.localArrays.push(arrayName);
-    } else {
-        delete this.arrays[this.localScopeName(arrayName)];
-        this.localArrays = this.localArrays.filter(x => x !== arrayName);
-        this.instructionDIM(arrayName, numDimensions);
-    }
+    // if (this.localArrays.indexOf(arrayName) < 0) {
+    //     this.instructionDIM(arrayName, numDimensions);
+    // } else if (arrayName in this.arrayReferenceParameters) {
+    //     this.localArrays = this.localArrays.filter(x => x !== arrayName);
+    //     this.instructionDIM(arrayName, numDimensions);
+    //     this.localArrays.push(arrayName);
+    // } else {
+    //     delete this.arrays[this.localScopeName(arrayName)];
+    //     this.localArrays = this.localArrays.filter(x => x !== arrayName);
+    //     this.instructionDIM(arrayName, numDimensions);
+    // }
+    this.instructionDIM(arrayName, numDimensions);
 };
 
 Interpreter.prototype.instructionLOCAL_STRING_VARIABLE = function (variableName) {
@@ -268,11 +255,13 @@ Interpreter.prototype.instructionFOR_CONDITIONAL_EXIT = function (variableName, 
 
     this.symbolStack.getNumericVariableStore(variableName)[variableName] = start;
 
-    if (!((step > 0 && start <= end) || (step < 0 && start >= end) || (step === 0))) {
+    if ((step > 0 && start <= end) || (step < 0 && start >= end) || (step === 0)) {
+        // continue loop
+    } else {
         this.programCounter = destination; // exit loop
     }
 
-    // continue loop
+
 };
 
 Interpreter.prototype.instructionFOR_CONDITIONAL_CONTINUE = function (variableName, destination) {

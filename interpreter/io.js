@@ -159,8 +159,6 @@ Interpreter.prototype.instructionINPUT = function (splitOnSpaces, isString) {
                 }
             });
         } else {
-            let value;
-
             if (splitOnSpaces) {
                 // take first word
                 this.inputBuffer = this.inputBuffer.trimLeft();
@@ -168,11 +166,11 @@ Interpreter.prototype.instructionINPUT = function (splitOnSpaces, isString) {
                 if (firstWhitespaceIndex === -1) {
                     firstWhitespaceIndex = this.inputBuffer.length;
                 }
-                value = this.inputBuffer.substring(0, firstWhitespaceIndex);
+                var value = this.inputBuffer.substring(0, firstWhitespaceIndex);
                 this.inputBuffer = this.inputBuffer.substring(firstWhitespaceIndex).trimLeft();
             } else {
                 // take everything
-                value = this.inputBuffer;
+                var value = this.inputBuffer;
                 this.inputBuffer = '';
             }
 

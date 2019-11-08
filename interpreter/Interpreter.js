@@ -91,7 +91,7 @@ class Interpreter {
         div.style.bottom = 0;
         div.style.left = 0;
         div.style.right = 0;
-        div.style.opacity = 0;//0.8;
+        div.style.opacity = 0.8;
         div.style.backgroundImage = 'url("data/vignette.png")';
         div.style.backgroundPosition = '50%';
         div.style.backgroundSize = '120% 100%';
@@ -108,7 +108,7 @@ class Interpreter {
         div.append(this.graphicsScreen.getDomElement());
         div.append(this.textScreen.getDomElement());
         div.append(this.messageDiv);
-        div.append(this.overlayDiv);
+        // div.append(this.overlayDiv);
         const screenDiv = div;
 
         // dualshock 2
@@ -262,20 +262,12 @@ class Interpreter {
 
             this.hideMessage();
 
-            this.subroutines = compiledSource.subroutines;
             this.instructions = compiledSource.instructions;
             this.instructionLabels = compiledSource.instructionLabels;
             this.data = compiledSource.data;
             this.dataLabels = compiledSource.dataLabels;
 
             this.numberOfDataItems = this.data.length;
-
-            this.arrays = {
-                docu$: {
-                    dimensions: [compiledSource.documentation.length],
-                    values: compiledSource.documentation,
-                },
-            };
 
             this.symbolStack = new SymbolStack(compiledSource.symbolTable);
             this.symbolStack.setGlobalVariables({
@@ -289,21 +281,11 @@ class Interpreter {
                     dimensions: [compiledSource.documentation.length],
                     values: compiledSource.documentation,
                 },
-                ...this.subroutines,
+                ...compiledSource.subroutines,
             });
 
-            this.variables = {
-                pi: 3.14159265359,
-                PI: 3.14159265359,
-                euler: 2.71828182864,
-                EULER: 2.71828182864,
-            };
-
             this.logInstructions();
-            // console.log('subroutines', this.subroutines);
-            // console.log('instructionLabels', this.instructionLabels);
-            // console.log('data', this.data);
-            // console.log('dataLabels', this.dataLabels);
+            console.log('Symbol stack', this.symbolStack);
 
             this.readControls = false;
             this.screenWidth = 80;
@@ -334,8 +316,6 @@ class Interpreter {
 
             this.subroutineName = null; // the current subroutine that's being executed
             this.arrayReferenceParameters = [];
-            this.localArrays = []; // holds an array of names of all arrays that currently have local scope
-            this.staticArrays = []; // hold an array of names of all arrays that currently have static scope
             this.callStack = []; // holds RETURN information for both subroutine calls and GOSUBs
             this.currentSubroutineLevel = 0; // how many subroutines within subroutine's we are located
 
@@ -446,11 +426,6 @@ class Interpreter {
         if (this.runTimeoutId !== null) {
             clearTimeout(this.runTimeoutId);
             this.runTimeoutId = null;
-
-            console.log('Symbol stack', this.symbolStack);
-            // console.log('arrays', this.arrays);
-            // console.log('inputBuffer', this.inputBuffer);
-            // console.log('subroutine', this.subroutine);
 
             if (this.valuesStackLength > 0) {
                 console.error('values left in stack!', this.valuesStack.slice(0, this.valuesStackLength));
