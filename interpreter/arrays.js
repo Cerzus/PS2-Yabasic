@@ -16,11 +16,11 @@ Interpreter.prototype.getArrayIndex = function (name, numDimensions) {
     if (array.dimensions === null || array.dimensions.length === 0) {
         this.throwError('ArrayParameterHasNotBeenSupplied', this.getRealSubroutineOrArrayName(name));
     }
-    
+
     if (numDimensions !== array.dimensions.length) {
         this.throwError('IndicesSuppliedExpectedFor', numDimensions, array.dimensions.length, this.getRealSubroutineOrArrayName(name));
     }
-    
+
     const dimensions = this.getArrayDimensions(numDimensions);
 
     for (let i = 0; i < dimensions.length; i++) {
@@ -61,6 +61,8 @@ Interpreter.prototype.getArrayDimensions = function (numDimensions) {
 // INSTRUCTIONS //
 //////////////////
 
+
+
 Interpreter.prototype.instructionSTORE_ARRAY_ELEMENT = function (name, numArguments) {
     const array = this.symbolStack.getArrayStore(name)[name];
 
@@ -74,32 +76,66 @@ Interpreter.prototype.instructionSTORE_ARRAY_ELEMENT = function (name, numArgume
     array.values[index] = value;
 };
 
-Interpreter.prototype.instructionSTORE_ARRAY_REFERENCE = function (arrayName) {
+
+
+Interpreter.prototype.instructionSTORE_LOCAL_ARRAY_REFERENCE = function (arrayName) {
+    this.symbolStack.arraysScope[arrayName] = 'LOCAL';
+
+    // take the reference to the array that was passed in or the default array (with dimensions null) off the stack
     const value = this.popValue();
 
+    // if the local array of the subroutine has not been defined or if it has already been initialised with a reference to a passed in array,
+    // we store the given array in its place. This is so that the local array will refer to the left-most passed in array or the default array
+    // (with dimensions null) if at least one of the passed in arrays has been omitted
     const store = this.symbolStack.getArrayStore(arrayName);
     const array = store[arrayName];
-
     if (array === undefined || array.dimensions !== null) { // TODO: check if a subroutine with the same name gives conflicts
-        store[arrayName] = value;
+        store[arrayName] = {
+            dimensions: value.dimensions,
+            values: value.values,
+        };
     }
 
-    // if (!(arrayName in this.arrayReferenceParameters)/* && value.dimensions !== null*/) {
-    //     this.arrayReferenceParameters[arrayName] = [value, value];
-    // } else if (arrayName in this.arrayReferenceParameters) {
-    //     this.arrayReferenceParameters[arrayName][0] = value;
-    // }
-};
+    if (!(arrayName in this.arrayArguments)) {
+        this.arrayArguments[arrayName] = {
+            rightMost: {
+                dimensions: value.dimensions,
+                values: value.values,
+            },
+        };
+    } else {
+        const arrayArgument = this.arrayArguments[arrayName];
+        var foo = false;
+        if (arrayArgument.rightMost.dimensions === null) {
+            foo = true;
+            arrayArgument.rightMost.dimensions = value.dimensions;
+            arrayArgument.rightMost.values = value.values;
+        }
 
-Interpreter.prototype.instructionLOAD_ARRAY_REFERENCE = function (name, type) {
-    const array = this.symbolStack.getArrayStore(name)[name];
+        // if at least two arrays on the right of this one in the parameter list have been passed in,
+        // the most left-one should be reset to its original state
+        if (arrayArgument.backup) {
+            arrayArgument.backup.dimensions = arrayArgument.dimensions;
+            arrayArgument.backup.values = arrayArgument.values;
+        }
 
-    if (array === undefined) { // TODO: check when a subroutine with the same name has been defined
-        this.throwError('ArrayNotDefined', this.getRealSubroutineOrArrayName(name));
+        // backup the current passed array
+        arrayArgument.backup = value; // save a reference to the current passed array
+        arrayArgument.dimensions = value.dimensions; // save a copy of the current passed array's dimensions
+        arrayArgument.values = value.values; // save a copy of the current passed array's values
+
+        // set the current passed array to refer to the right-most
+        if (!foo) {
+            value.dimensions = arrayArgument.rightMost.dimensions;
+            value.values = arrayArgument.rightMost.values;
+        } else {
+            value.dimensions = store[arrayName].dimensions;
+            value.values = store[arrayName].values;
+        }
     }
-
-    this.valuesStackPush({ value: array, type });
 };
+
+
 
 Interpreter.prototype.instructionCALL_ARRAY = function (name, numArguments) {
     const array = this.symbolStack.getArrayStore(name)[name];
@@ -121,13 +157,19 @@ Interpreter.prototype.instructionCALL_ARRAY = function (name, numArguments) {
     }
 };
 
-Interpreter.prototype.instructionCALL_ARRAY_PUSH_INDICES = function (name, numArguments) {
-    for (let i = 0; i < numArguments; i++) {
-        this.valuesStackPush({ ...this.valuesStackPeek(numArguments - 1) });
+
+
+Interpreter.prototype.instructionLOAD_ARRAY_REFERENCE = function (name, type) {
+    const array = this.symbolStack.getArrayStore(name)[name];
+
+    if (array === undefined) { // TODO: check when a subroutine with the same name has been defined
+        this.throwError('ArrayNotDefined', this.getRealSubroutineOrArrayName(name));
     }
 
-    this.instructionCALL_ARRAY(name, numArguments);
+    this.valuesStackPush({ value: array, type });
 };
+
+
 
 Interpreter.prototype.instructionDIM = function (name, numDimensions) {
     const store = this.symbolStack.getArrayStore(name);
@@ -164,13 +206,13 @@ Interpreter.prototype.instructionDIM = function (name, numDimensions) {
 
     // multiply all dimensions together to get the total number of elements
     const numberOfElements = dimensions.length > 0 ? dimensions.reduce((acc, curr) => acc * curr) : 0;
-    
+
     // TODO: check better
     // if (numberOfElements > (arrayName.endsWith('$') ? 100000 : 1000000)) {
-        if (numberOfElements > (this.getRealSubroutineOrArrayName(name).endsWith('$') ? 100000 : 1000000)) {
+    if (numberOfElements > (this.getRealSubroutineOrArrayName(name).endsWith('$') ? 100000 : 1000000)) {
         this.throwFatalError('OutOfMemory');
     }
-    
+
     const defaultValue = this.getRealSubroutineOrArrayName(name).endsWith('$') ? '' : 0;
 
     // if the array already exsists, copy the old values and fill the rest with default values
@@ -232,4 +274,37 @@ Interpreter.prototype.instructionDIM = function (name, numDimensions) {
             values: new Array(numberOfElements).fill(defaultValue),
         };
     }
+};
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Interpreter.prototype.instructionCALL_ARRAY_PUSH_INDICES = function (name, numArguments) {
+    for (let i = 0; i < numArguments; i++) {
+        this.valuesStackPush({ ...this.valuesStackPeek(numArguments - 1) });
+    }
+
+    this.instructionCALL_ARRAY(name, numArguments);
 };

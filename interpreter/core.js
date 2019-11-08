@@ -313,15 +313,6 @@ Interpreter.prototype.instructionBELL = function () {
     // }
 };
 
-Interpreter.prototype.instructionCALL_FUNCTION_OR_ARRAY = function (name, numArguments) {
-    const subroutineOrArray = this.symbolStack.globalSubroutinesAndArrays[name];
-    if (subroutineOrArray !== undefined && subroutineOrArray.address) { // TODO: is this correct?
-        this.instructionCALL_FUNCTION(name, numArguments);
-    } else {
-        this.instructionCALL_ARRAY(name, numArguments);
-    }
-};
-
 Interpreter.prototype.instructionREAD = function (variableType) {
     if (this.dataIndex >= this.numberOfDataItems) {
         this.throwError('RunOutOfDataItems');

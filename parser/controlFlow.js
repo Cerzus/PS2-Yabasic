@@ -94,8 +94,7 @@ Parser.prototype.evaluateSUBROUTINE_STATEMENT = function (node) {
                 break;
             case 'STRING_ARRAY':
             case 'NUMERIC_ARRAY':
-                this.addInstruction(parameter.line, 'LOCAL_ARRAY_REFERENCE', this.subroutineOrArray(parameter.name));
-                this.addInstruction(parameter.line, 'STORE_ARRAY_REFERENCE', this.subroutineOrArray(parameter.name));
+                this.addInstruction(parameter.line, 'STORE_LOCAL_ARRAY_REFERENCE', this.subroutineOrArray(parameter.name));
                 break;
         }
     }
