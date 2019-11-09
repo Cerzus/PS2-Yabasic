@@ -10,8 +10,8 @@ class Interpreter {
     constructor() {
         this.version = 2.66;
         this.fps = 50;
-        this.cpuUsage = 0.2;
-        this.maxInstructionsPerFrame = 1400000;
+        this.cpuUsage = 1;
+        this.maxInstructionsPerFrame = 140000000;
         this.resolution = {
             width: 640,
             height: 512,
@@ -370,7 +370,16 @@ class Interpreter {
                 for (let i = 0; i < 100 && !this.endFrame && running; i++) {
                     const instruction = this.instructions[this.programCounter++]; // cannot cache instructios, because COMPILE might add more
 
-                    this[instruction.type](...instruction.arguments);
+                    switch (instruction.type) {
+                        case 'instructionLOAD_NUMERIC_VARIABLE':
+                            this.instructionLOAD_NUMERIC_VARIABLE(instruction.arguments[0]);
+                            break;
+                        case 'instructionSTORE_NUMERIC_VARIABLE':
+                            this.instructionSTORE_NUMERIC_VARIABLE(instruction.arguments[0]);
+                            break;
+                        default:
+                            this[instruction.type](...instruction.arguments);
+                    }
 
                     running = this.programCounter < this.instructions.length && !this.errorsFound;
                 }
@@ -407,6 +416,7 @@ class Interpreter {
         else if (running) {
             this.requestFrame(endOfFrameTime - Date.now());
         } else {
+            console.log(Date.now() - this.programStartedTime)
             this.stop();
             this.showMessage(this.strings.get('ExecutionComplete'), this.strings.get('ProgramCompletedExecution'));
         }
