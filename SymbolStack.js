@@ -6,7 +6,7 @@ class SymbolStack {
 
         this.stackFrames = [];
 
-        this.pushStackFrame(null);
+        this.pushStackFrame();
 
         this.globalStringVariables = this.localStringVariables;
         this.globalNumericVariables = this.localNumericVariables;
@@ -24,13 +24,13 @@ class SymbolStack {
     }
 
     setGlobalSubroutinesAndArrays(subroutinesAndArrays) {
-        for (let realName in subroutinesAndArrays) {
-            const name = this.symbolTable.subroutinesAndArrays.indexOf(realName);
-            const currentSubroutineOrArray = this.globalSubroutinesAndArrays[name];
+        for (let name in subroutinesAndArrays) {
+            const id = this.symbolTable.subroutinesAndArrays.indexOf(name);
 
             // only add new subroutines and arrays or subroutines that overwrite arrays of the same name
+            const currentSubroutineOrArray = this.globalSubroutinesAndArrays[id];
             if (currentSubroutineOrArray === undefined || currentSubroutineOrArray.address === undefined) {
-                const subroutineOrArray = subroutinesAndArrays[realName];
+                const subroutineOrArray = subroutinesAndArrays[name];
 
                 // subroutines get symbol stores for static variables and arrays
                 if (subroutineOrArray.address) {
@@ -39,7 +39,7 @@ class SymbolStack {
                     subroutineOrArray.arrays = [];
                 }
 
-                this.globalSubroutinesAndArrays[name] = subroutinesAndArrays[realName];
+                this.globalSubroutinesAndArrays[id] = subroutineOrArray;
             }
         }
     }
@@ -52,9 +52,9 @@ class SymbolStack {
         this.dataLabels = dataLabels;
     }
 
-    pushStackFrame(subroutineName) {
+    pushStackFrame(subroutineId) {
         this.stackFrame = this.stackFrames[this.stackFrames.push({
-            subroutine: subroutineName !== null ? this.globalSubroutinesAndArrays[subroutineName] : null,
+            subroutine: subroutineId !== undefined ? this.globalSubroutinesAndArrays[subroutineId] : undefined,
 
             numericVariables: [],
             numericVariablesScope: [],
@@ -90,8 +90,8 @@ class SymbolStack {
         this.arraysScope = this.stackFrame.arraysScope;
     }
 
-    getStringVariableStore(variableName) {
-        switch (this.stringVariablesScope[variableName]) {
+    getStringVariableStore(id) {
+        switch (this.stringVariablesScope[id]) {
             case undefined:
                 return this.globalStringVariables;
             case 'LOCAL':
@@ -101,8 +101,8 @@ class SymbolStack {
         }
     }
 
-    getNumericVariableStore(variableName) {
-        switch (this.numericVariablesScope[variableName]) {
+    getNumericVariableStore(id) {
+        switch (this.numericVariablesScope[id]) {
             case undefined:
                 return this.globalNumericVariables;
             case 'LOCAL':
@@ -112,8 +112,8 @@ class SymbolStack {
         }
     }
 
-    getArrayStore(arrayName) {
-        switch (this.arraysScope[arrayName]) {
+    getArrayStore(id) {
+        switch (this.arraysScope[id]) {
             case undefined:
                 return this.globalSubroutinesAndArrays;
             case 'LOCAL':
@@ -121,5 +121,33 @@ class SymbolStack {
             default:
                 return this.stackFrame.subroutine.arrays;
         }
+    }
+
+    getArray(id) {
+        return this.getArrayStore(id)[id];
+    }
+
+    getArrayName(id) {
+        return this.symbolTable.subroutinesAndArrays[id];
+    }
+
+    getArrayType(id) {
+        return this.symbolTable.subroutinesAndArrays[id].endsWith('$') ? 'String' : 'Number';
+    }
+
+    getSubroutine(id) {
+        return this.globalSubroutinesAndArrays[id];
+    }
+
+    getSubroutineName(id) {
+        return this.symbolTable.subroutinesAndArrays[id];
+    }
+
+    getSubroutineType(id) {
+        return this.symbolTable.subroutinesAndArrays[id].endsWith('$') ? 'String' : 'Number';
+    }
+
+    getLabelName(id) {
+        return this.symbolTable.labels[id];
     }
 }

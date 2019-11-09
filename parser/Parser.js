@@ -47,7 +47,7 @@ class Parser {
 
         this.evaluateNode(abstractSyntaxTree);
 
-        // TODO: test if sending everything when using COMPILE makes a significant difference
+        // TODO: test whether sending everything when using COMPILE has a significant impact on performance
         return this.isStuck ? null : {
             subroutines: this.subroutines,
             instructions: this.instructions,

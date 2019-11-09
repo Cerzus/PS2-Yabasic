@@ -164,12 +164,3 @@ Interpreter.prototype.numberToInt = function (number) {
     // ~~? 2.64: TODO, 2.66: TODO 
     return ~~Math.min(Math.max(-this.EXP2E31, number), this.EXP2E31 - 1);
 };
-
-Interpreter.prototype.getRealSubroutineOrArrayName = function (name) {
-    return this.symbolStack.symbolTable.subroutinesAndArrays[name];
-};
-
-Interpreter.prototype.getRealLabelName = function (name) {
-    return this.symbolStack.symbolTable.labels[name];
-};
-

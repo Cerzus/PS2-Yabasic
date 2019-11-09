@@ -26,35 +26,35 @@ Interpreter.prototype.instructionSTRING = function (value) {
     this.pushString(value);
 };
 
-Interpreter.prototype.instructionSTORE_STRING_VARIABLE = function (variableName) {
-    this.symbolStack.getStringVariableStore(variableName)[variableName] = this.popString();
+Interpreter.prototype.instructionSTORE_STRING_VARIABLE = function (id) {
+    this.symbolStack.getStringVariableStore(id)[id] = this.popString();
 };
 
-Interpreter.prototype.instructionSTORE_NUMERIC_VARIABLE = function (variableName) {
-    this.symbolStack.getNumericVariableStore(variableName)[variableName] = this.popNumber();
+Interpreter.prototype.instructionSTORE_NUMERIC_VARIABLE = function (id) {
+    this.symbolStack.getNumericVariableStore(id)[id] = this.popNumber();
 };
 
-Interpreter.prototype.instructionLOAD_STRING_VARIABLE = function (variableName) {
-    const store = this.symbolStack.getStringVariableStore(variableName);
-    let string = store[variableName];
+Interpreter.prototype.instructionLOAD_STRING_VARIABLE = function (id) {
+    const store = this.symbolStack.getStringVariableStore(id);
+    let string = store[id];
 
     if (string === undefined) {
         string = '';
 
-        store[variableName] = string;
+        store[id] = string;
     }
 
     this.pushString(string);
 };
 
-Interpreter.prototype.instructionLOAD_NUMERIC_VARIABLE = function (variableName) {
-    const store = this.symbolStack.getNumericVariableStore(variableName);
-    let number = store[variableName];
+Interpreter.prototype.instructionLOAD_NUMERIC_VARIABLE = function (id) {
+    const store = this.symbolStack.getNumericVariableStore(id);
+    let number = store[id];
 
     if (number === undefined) {
         number = 0;
 
-        store[variableName] = number;
+        store[id] = number;
     }
 
     this.pushNumber(number);
@@ -333,14 +333,14 @@ Interpreter.prototype.instructionREAD = function (variableType) {
     this.dataIndex++;
 };
 
-Interpreter.prototype.instructionRESTORE = function (label) {
-    if (label === null) {
+Interpreter.prototype.instructionRESTORE = function (labelId) {
+    if (labelId === null) {
         this.dataIndex = 0;
     } else {
-        const dataIndex = this.symbolStack.dataLabels[label];
+        const dataIndex = this.symbolStack.dataLabels[labelId];
 
         if (dataIndex === undefined) {
-            this.throwError('CantFindLabel', this.library + '.' + this.getRealLabelName(label));
+            this.throwError('CantFindLabel', this.library + '.' + this.symbolStack.getLabelName(labelId));
         }
 
         this.dataIndex = dataIndex;

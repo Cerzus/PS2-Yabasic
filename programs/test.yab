@@ -1,16 +1,2 @@
-sub s()
-static f
-f=f+1
-?f
-end sub
-s()
-s()
-s()
-dim g(9)
-g(5)=123
-?g(5)
-compile("sub g(o) return 0 end sub")
-?g(5)
-s()
-s()
-s()
+dim a(45,31)
+a(23,11)

@@ -59,39 +59,35 @@ Parser.prototype.evaluateFUNCTION_OR_ARRAY_STATEMENT = function (node) {
 };
 
 Parser.prototype.evaluateSUBROUTINE_STATEMENT = function (node) {
+    const types = {
+        'STRING_VARIABLE': 'String',
+        'NUMERIC_VARIABLE': 'Number',
+        'NUMPARAMS': 'Number',
+        'STRING_ARRAY': 'StringArray',
+        'NUMERIC_ARRAY': 'NumericArray',
+    };
+
     // add a jump instruction to skip across the subroutine when executing code outside of it
     const skipSubroutineJumpIndex = this.addInstructionPlaceholder();
 
     // add the subroutine to the list of subroutines in this program
     this.subroutines[node.name] = {
-        parameters: node.parameters.map(parameter => {
-            const types = {
-                'STRING_VARIABLE': 'String',
-                'NUMERIC_VARIABLE': 'Number',
-                'NUMPARAMS': 'Number',
-                'STRING_ARRAY': 'StringArray',
-                'NUMERIC_ARRAY': 'NumericArray',
-            };
-            return types[parameter.type];
-        }),
+        parameters: node.parameters.map(parameter => types[parameter.type]),
         address: this.instructions.length,
         instructionLabels: [],
     };
 
-    this.addInstruction(node.line, 'LOCAL_NUMERIC_VARIABLE', this.numericVariable('numparams'));
-    this.addInstruction(node.line, 'STORE_NUMERIC_VARIABLE', this.numericVariable('numparams'));
+    this.addInstruction(node.line, 'STORE_LOCAL_NUMERIC_VARIABLE', this.numericVariable('numparams'));
 
     for (let i = node.parameters.length - 1; i >= 0; i--) {
         const parameter = node.parameters[i];
         switch (parameter.type) {
             case 'STRING_VARIABLE':
-                this.addInstruction(parameter.line, 'LOCAL_STRING_VARIABLE', this.stringVariable(parameter.name));
-                this.addInstruction(parameter.line, 'STORE_STRING_VARIABLE', this.stringVariable(parameter.name));
+                this.addInstruction(parameter.line, 'STORE_LOCAL_STRING_VARIABLE', this.stringVariable(parameter.name));
                 break;
             case 'NUMERIC_VARIABLE':
             case 'NUMPARAMS':
-                this.addInstruction(parameter.line, 'LOCAL_NUMERIC_VARIABLE', this.numericVariable(parameter.name));
-                this.addInstruction(parameter.line, 'STORE_NUMERIC_VARIABLE', this.numericVariable(parameter.name));
+                this.addInstruction(parameter.line, 'STORE_LOCAL_NUMERIC_VARIABLE', this.numericVariable(parameter.name));
                 break;
             case 'STRING_ARRAY':
             case 'NUMERIC_ARRAY':

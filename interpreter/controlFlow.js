@@ -4,18 +4,18 @@
 // UTILITY FUNCTIONS //
 ///////////////////////
 
-Interpreter.prototype.gotoOrGosub = function (label, gosub) {
-    if (this.symbolStack.stackFrame.subroutine) {
-        var instructionIndex = this.symbolStack.stackFrame.subroutine.instructionLabels[label];
+Interpreter.prototype.gotoOrGosub = function (labelId, gosub) {
+    if (this.symbolStack.stackFrame.subroutine !== undefined) {
+        var instructionIndex = this.symbolStack.stackFrame.subroutine.instructionLabels[labelId];
 
         if (instructionIndex === undefined) {
-            this.throwError(['CantFindLabel', 'NotInThisSub'], this.getRealLabelName(label));
+            this.throwError(['CantFindLabel', 'NotInThisSub'], this.symbolStack.getLabelName(labelId));
         }
     } else {
-        var instructionIndex = this.symbolStack.instructionLabels[label];
+        var instructionIndex = this.symbolStack.instructionLabels[labelId];
 
         if (instructionIndex === undefined) {
-            this.throwError('CantFindLabel', this.getRealLabelName(label));
+            this.throwError('CantFindLabel', this.symbolStack.getLabelName(labelId));
         }
     }
 
@@ -33,20 +33,21 @@ Interpreter.prototype.gotoOrGosub = function (label, gosub) {
 // INSTRUCTIONS //
 //////////////////
 
-Interpreter.prototype.instructionCALL_FUNCTION_OR_ARRAY = function (name, numArguments) {
-    const subroutineOrArray = this.symbolStack.globalSubroutinesAndArrays[name];
+Interpreter.prototype.instructionCALL_FUNCTION_OR_ARRAY = function (id, numArguments) {
+    const subroutineOrArray = this.symbolStack.getSubroutine(id);
     if (subroutineOrArray !== undefined && subroutineOrArray.address) {
-        this.instructionCALL_FUNCTION(name, numArguments);
+        this.instructionCALL_FUNCTION(id, numArguments);
     } else {
-        this.loadArray(name, numArguments);
+        this.loadArray(id, numArguments);
     }
 };
 
-Interpreter.prototype.instructionCALL_FUNCTION = function (name, numArguments) {
+Interpreter.prototype.instructionCALL_FUNCTION = function (id, numArguments) {
     // if the requested subroutine does not exist, throw an error
-    const subroutine = this.symbolStack.globalSubroutinesAndArrays[name];
-    if (subroutine === undefined) {
-        this.throwError('CantFind', this.strings.get('Subroutine'), this.getRealSubroutineOrArrayName(name));
+    const subroutine = this.symbolStack.getSubroutine(id);
+
+    if (subroutine === undefined || subroutine.dimensions) {
+        this.throwError('CantFind', this.strings.get('Subroutine'), this.symbolStack.getSubroutineName(id));
     }
 
     const parameters = subroutine.parameters;
@@ -84,33 +85,28 @@ Interpreter.prototype.instructionCALL_FUNCTION = function (name, numArguments) {
 
     this.callStack.push({
         type: 'SUBROUTINE',
-        subroutineName: this.subroutineName,
         programCounter: this.programCounter,
     });
-    this.symbolStack.pushStackFrame(name);
-
-    this.subroutineName = this.getRealSubroutineOrArrayName(name);
+    this.symbolStack.pushStackFrame(id);
 
     this.programCounter = subroutine.address;
-
-    this.currentSubroutineLevel++;
 };
 
 Interpreter.prototype.instructionRETURN = function (hasReturnValue) {
-    if (this.subroutineName) {
+    if (this.symbolStack.stackFrame.subroutine !== undefined) {
         if (this.callStack[this.callStack.length - 1].type === 'GOSUB') {
             this.throwError('ReturnFromSubWithoutCall');
         }
 
         if (hasReturnValue) {
             const returnValueType = this.strings.get('A' + this.valuesStackPeek().type);
-            const subroutineType = this.strings.get(this.subroutineName.endsWith('$') ? 'AString' : 'ANumber');
+            const subroutineType = this.strings.get('A' + this.symbolStack.stackFrame.subroutine.type);
 
             if (returnValueType !== subroutineType) {
                 this.throwError('SubReturnsButShouldReturn', returnValueType, subroutineType);
             }
         } else {
-            if (this.subroutineName.endsWith('$')) {
+            if (this.symbolStack.stackFrame.subroutine.type === 'String') {
                 this.pushString('');
             } else {
                 this.pushNumber(0);
@@ -120,10 +116,7 @@ Interpreter.prototype.instructionRETURN = function (hasReturnValue) {
         const context = this.callStack.pop();
         this.symbolStack.popStackFrame();
 
-        this.subroutineName = context.subroutineName;
-
         this.programCounter = context.programCounter;
-        this.currentSubroutineLevel--;
     } else {
         if (this.callStack.length === 0) {
             this.throwError('ReturnWithoutGosub');
@@ -133,44 +126,59 @@ Interpreter.prototype.instructionRETURN = function (hasReturnValue) {
     }
 };
 
-Interpreter.prototype.instructionLOCAL_ARRAY = function (arrayName, numDimensions) {
-    if (this.symbolStack.arraysScope[arrayName]) {
-        this.throwError('AlreadyDefinedWithinSub', this.getRealSubroutineOrArrayName(arrayName));
+Interpreter.prototype.instructionSTORE_LOCAL_ARRAY_REFERENCE = function (id) {
+    if (this.symbolStack.arraysScope[id]) {
+        this.throwError('AlreadyDefinedWithinSub', this.symbolStack.getArrayName(id));
     }
 
-    this.symbolStack.arraysScope[arrayName] = 'LOCAL';
+    this.symbolStack.arraysScope[id] = 'LOCAL';
 
-    this.instructionDIM(arrayName, numDimensions);
+    const value = this.popValue();
+
+    this.symbolStack.getArray(id) = {
+        dimensions: value.dimensions,
+        values: value.values,
+    };
 };
 
-Interpreter.prototype.instructionSTATIC_ARRAY = function (arrayName, numDimensions) {
-    if (this.symbolStack.arraysScope[arrayName] === 'LOCAL') {
-        this.throwError('AlreadyDefinedWithinSub', this.getRealSubroutineOrArrayName(arrayName));
+Interpreter.prototype.instructionLOCAL_ARRAY = function (id, numDimensions) {
+    if (this.symbolStack.arraysScope[id] !== undefined) {
+        this.throwError('AlreadyDefinedWithinSub', this.symbolStack.getArrayName(id));
     }
 
-    this.symbolStack.arraysScope[arrayName] = 'STATIC';
+    this.symbolStack.arraysScope[id] = 'LOCAL';
 
-    this.instructionDIM(arrayName, numDimensions);
+    this.instructionDIM(id, numDimensions);
 };
 
-Interpreter.prototype.instructionGOTO = function (label) {
-    this.gotoOrGosub(label, false);
+Interpreter.prototype.instructionSTATIC_ARRAY = function (id, numDimensions) {
+    if (this.symbolStack.arraysScope[id] === 'LOCAL') {
+        this.throwError('AlreadyDefinedWithinSub', this.symbolStack.getArrayName(id));
+    }
+
+    this.symbolStack.arraysScope[id] = 'STATIC';
+
+    this.instructionDIM(id, numDimensions);
 };
 
-Interpreter.prototype.instructionGOSUB = function (label) {
-    this.gotoOrGosub(label, true);
+Interpreter.prototype.instructionGOTO = function (labelId) {
+    this.gotoOrGosub(labelId, false);
 };
 
-Interpreter.prototype.instructionON_GOTO = function (labels) {
+Interpreter.prototype.instructionGOSUB = function (labelId) {
+    this.gotoOrGosub(labelId, true);
+};
+
+Interpreter.prototype.instructionON_GOTO = function (labelIds) {
     // numberToInt? 2.64: TODO, 2.66: TODO 
-    const on = Math.min(Math.max(0, this.numberToInt(this.popNumber()) - 1), labels.length - 1);
-    this.instructionGOTO(labels[on]);
+    const on = Math.min(Math.max(0, this.numberToInt(this.popNumber()) - 1), labelIds.length - 1);
+    this.instructionGOTO(labelIds[on]);
 };
 
-Interpreter.prototype.instructionON_GOSUB = function (labels) {
+Interpreter.prototype.instructionON_GOSUB = function (labelIds) {
     // numberToInt? 2.64: TODO, 2.66: TODO 
-    const on = Math.min(Math.max(0, this.numberToInt(this.popNumber()) - 1), labels.length - 1);
-    this.instructionGOSUB(labels[on]);
+    const on = Math.min(Math.max(0, this.numberToInt(this.popNumber()) - 1), labelIds.length - 1);
+    this.instructionGOSUB(labelIds[on]);
 };
 
 Interpreter.prototype.instructionEND = function () {
@@ -182,20 +190,20 @@ Interpreter.prototype.instructionEXECUTE$ = function (numArguments) {
         this.throwError('NeedStringAsFunctionName');
     }
 
-    const realName = this.valuesStackExtract(numArguments - 1).value;
+    const name = this.valuesStackExtract(numArguments - 1).value;
 
-    if (!realName.endsWith('$')) {
-        this.throwError('ExpectingNameOfFunctionNot', this.strings.get('String'), realName);
+    if (!name.endsWith('$')) {
+        this.throwError('ExpectingNameOfFunctionNot', this.strings.get('String'), name);
     }
 
-    const name = this.symbolStack.symbolTable.subroutinesAndArrays.indexOf(realName);
-    const subroutine = this.symbolStack.globalSubroutinesAndArrays[name];
+    const id = this.symbolStack.symbolTable.subroutinesAndArrays.indexOf(name);
+    const subroutine = this.symbolStack.getSubroutine(id);
 
     if (subroutine === undefined || subroutine.dimensions) {
-        this.throwError('SubroutineNotDefined', this.library + '.' + name);
+        this.throwError('SubroutineNotDefined', this.library + '.' + id);
     }
 
-    this.instructionCALL_FUNCTION(name, numArguments - 1);
+    this.instructionCALL_FUNCTION(id, numArguments - 1);
 }
 
 Interpreter.prototype.instructionEXECUTE = function (numArguments) {
@@ -203,53 +211,62 @@ Interpreter.prototype.instructionEXECUTE = function (numArguments) {
         this.throwError('NeedStringAsFunctionName');
     }
 
-    const realName = this.valuesStackExtract(numArguments - 1).value;
+    const name = this.valuesStackExtract(numArguments - 1).value;
 
-    if (realName.endsWith('$')) {
-        this.throwError('ExpectingNameOfFunctionNot', this.strings.get('Numeric'), realName);
+    if (name.endsWith('$')) {
+        this.throwError('ExpectingNameOfFunctionNot', this.strings.get('Numeric'), name);
     }
 
-    const name = this.symbolStack.symbolTable.subroutinesAndArrays.indexOf(realName);
-    const subroutine = this.symbolStack.globalSubroutinesAndArrays[name];
+    const id = this.symbolStack.symbolTable.subroutinesAndArrays.indexOf(name);
+    const subroutine = this.symbolStack.getSubroutine(id);
 
     if (subroutine === undefined || subroutine.dimensions) {
-        this.throwError('SubroutineNotDefined', this.library + '.' + name);
+        this.throwError('SubroutineNotDefined', this.library + '.' + id);
     }
 
-    this.instructionCALL_FUNCTION(name, numArguments - 1);
-
+    this.instructionCALL_FUNCTION(id, numArguments - 1);
 }
 
-Interpreter.prototype.instructionLOCAL_STRING_VARIABLE = function (variableName) {
-    if (this.symbolStack.stringVariablesScope[variableName]) {
-        this.throwError('AlreadyDefinedWithinSub', this.symbolStack.symbolTable.stringVariables[variableName]);
+Interpreter.prototype.instructionSTORE_LOCAL_STRING_VARIABLE = function (id) {
+    this.instructionLOCAL_STRING_VARIABLE(id);
+    this.instructionSTORE_STRING_VARIABLE(id);
+};
+
+Interpreter.prototype.instructionSTORE_LOCAL_NUMERIC_VARIABLE = function (id) {
+    this.instructionLOCAL_NUMERIC_VARIABLE(id);
+    this.instructionSTORE_NUMERIC_VARIABLE(id);
+};
+
+Interpreter.prototype.instructionLOCAL_STRING_VARIABLE = function (id) {
+    if (this.symbolStack.stringVariablesScope[id]) {
+        this.throwError('AlreadyDefinedWithinSub', this.symbolStack.symbolTable.stringVariables[id]);
     }
 
-    this.symbolStack.stringVariablesScope[variableName] = 'LOCAL';
+    this.symbolStack.stringVariablesScope[id] = 'LOCAL';
 };
 
-Interpreter.prototype.instructionLOCAL_NUMERIC_VARIABLE = function (variableName) {
-    if (this.symbolStack.numericVariablesScope[variableName]) {
-        this.throwError('AlreadyDefinedWithinSub', this.symbolStack.symbolTable.numericVariables[variableName]);
+Interpreter.prototype.instructionLOCAL_NUMERIC_VARIABLE = function (id) {
+    if (this.symbolStack.numericVariablesScope[id]) {
+        this.throwError('AlreadyDefinedWithinSub', this.symbolStack.symbolTable.numericVariables[id]);
     }
 
-    this.symbolStack.numericVariablesScope[variableName] = 'LOCAL';
+    this.symbolStack.numericVariablesScope[id] = 'LOCAL';
 };
 
-Interpreter.prototype.instructionSTATIC_STRING_VARIABLE = function (variableName) {
-    this.symbolStack.stringVariablesScope[variableName] = 'STATIC';
+Interpreter.prototype.instructionSTATIC_STRING_VARIABLE = function (id) {
+    this.symbolStack.stringVariablesScope[id] = 'STATIC';
 };
 
-Interpreter.prototype.instructionSTATIC_NUMERIC_VARIABLE = function (variableName) {
-    this.symbolStack.numericVariablesScope[variableName] = 'STATIC';
+Interpreter.prototype.instructionSTATIC_NUMERIC_VARIABLE = function (id) {
+    this.symbolStack.numericVariablesScope[id] = 'STATIC';
 };
 
-Interpreter.prototype.instructionFOR_CONDITIONAL_EXIT = function (variableName, destination) {
+Interpreter.prototype.instructionFOR_CONDITIONAL_EXIT = function (variableId, destination) {
     const step = this.popNumber();
     const end = this.popNumber();
     const start = this.popNumber();
 
-    this.symbolStack.getNumericVariableStore(variableName)[variableName] = start;
+    this.symbolStack.getNumericVariableStore(variableId)[variableId] = start;
 
     if ((step > 0 && start <= end) || (step < 0 && start >= end) || (step === 0)) {
         // continue loop
@@ -258,12 +275,12 @@ Interpreter.prototype.instructionFOR_CONDITIONAL_EXIT = function (variableName, 
     }
 };
 
-Interpreter.prototype.instructionFOR_CONDITIONAL_CONTINUE = function (variableName, destination) {
+Interpreter.prototype.instructionFOR_CONDITIONAL_CONTINUE = function (variableId, destination) {
     const step = this.popNumber();
     const end = this.popNumber();
     const start = this.popNumber();
 
-    const variable = this.symbolStack.getNumericVariableStore(variableName)[variableName] += step;
+    const variable = this.symbolStack.getNumericVariableStore(variableId)[variableId] += step;
 
     if ((step > 0 && variable >= start && variable <= end) || (step < 0 && variable >= end && variable <= start) || (step === 0)) {
         this.programCounter = destination; // continue loop

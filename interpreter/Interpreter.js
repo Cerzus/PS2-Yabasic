@@ -314,9 +314,7 @@ class Interpreter {
             this.valuesStack = [];
             this.valuesStackLength = 0;
 
-            this.subroutineName = null; // the current subroutine that's being executed
             this.callStack = []; // holds RETURN information for both subroutine calls and GOSUBs
-            this.currentSubroutineLevel = 0; // how many subroutines within subroutine's we are located
 
             // this.delayStartTime = null; // used for WAIT, PAUSE, BELL, BEEP
             this.waitStartTime = null; // used for WAIT, PAUSE
@@ -368,7 +366,7 @@ class Interpreter {
             do {
                 // run a maximum of one hundred instructions before checking if enough time has passed to take a break
                 for (let i = 0; i < 100 && !this.endFrame && running; i++) {
-                    const instruction = this.instructions[this.programCounter++]; // cannot cache instructios, because COMPILE might add more
+                    const instruction = this.instructions[this.programCounter++]; // cannot cache instructions, because COMPILE might add more
 
                     switch (instruction.type) {
                         case 'instructionLOAD_NUMERIC_VARIABLE':
