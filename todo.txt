@@ -4,6 +4,8 @@ interface:
     version pick option
 
 both versions:
+    multiple array parameters with the same name
+    convert array argument to static inside subroutine
     a()=a() error
     text a(),a(),a$(),a$() error
     symbol dump poke
