@@ -3,7 +3,7 @@
 Interpreter.prototype.queueMessage = function (type, stringName, ...parameters) {
     this.errorQueue.push([
         type,
-        this.instructions[this.programCounter - 1][0],
+        this.instructions[this.programCounter - 1].line,
         this.strings.get(stringName, ...parameters),
     ]);
 };

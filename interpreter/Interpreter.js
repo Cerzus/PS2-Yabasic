@@ -11,7 +11,7 @@ class Interpreter {
         this.version = 2.66;
         this.fps = 50;
         this.cpuUsage = 1;
-        this.maxInstructionsPerFrame = 1400;
+        this.maxInstructionsPerFrame = 1400000;
         this.resolution = {
             width: 640,
             height: 512,
@@ -376,10 +376,10 @@ class Interpreter {
             const ins = 'instruction';
             do {
                 // run a maximum of ten instructions before checking if enough time has passed to take a break
-                for (let i = 0; i < 10 && !this.endFrame && running; i++) {
+                for (let i = 0; i < 100 && !this.endFrame && running; i++) {
                     const instruction = this.instructions[this.programCounter++];
 
-                    this[ins + instruction[1]](...instruction.slice(2));
+                    this[instruction.type](...instruction.arguments);
 
                     running = this.programCounter < this.instructions.length && !this.errorsFound;
                 }
@@ -415,7 +415,7 @@ class Interpreter {
         }
         else if (running) {
             this.requestFrame(endOfFrameTime - Date.now());
-        } else {
+        } else {console.log(Date.now()-this.programStartedTime)
             this.stop();
             this.showMessage(this.strings.get('ExecutionComplete'), this.strings.get('ProgramCompletedExecution'));
         }

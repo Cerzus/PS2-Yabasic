@@ -67,7 +67,7 @@ class Parser {
     }
 
     addInstruction(...instruction) {
-        this.instructions.push(instruction);
+        this.instructions.push({ line: instruction[0], type: 'instruction' + instruction[1], arguments: instruction.slice(2)});
     }
 
     addInstructionPlaceholder() {
@@ -75,7 +75,7 @@ class Parser {
     }
 
     insertInstruction(index, ...instruction) {
-        this.instructions[index] = instruction;
+        this.instructions[index] = { line: instruction[0], type: 'instruction' + instruction[1], arguments: instruction.slice(2)};
     }
 
     escapeString(string) {
