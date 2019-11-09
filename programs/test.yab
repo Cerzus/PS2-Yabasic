@@ -1,4 +1,16 @@
-5sub a()
-goto 5
+sub s()
+static f
+f=f+1
+?f
 end sub
-a()
+s()
+s()
+s()
+dim g(9)
+g(5)=123
+?g(5)
+compile("sub g(o) return 0 end sub")
+?g(5)
+s()
+s()
+s()

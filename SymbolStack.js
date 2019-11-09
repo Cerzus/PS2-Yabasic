@@ -24,17 +24,23 @@ class SymbolStack {
     }
 
     setGlobalSubroutinesAndArrays(subroutinesAndArrays) {
-        for (let name in subroutinesAndArrays) {
-            const subroutineOrArray = subroutinesAndArrays[name];
+        for (let realName in subroutinesAndArrays) {
+            const name = this.symbolTable.subroutinesAndArrays.indexOf(realName);
+            const currentSubroutineOrArray = this.globalSubroutinesAndArrays[name];
 
-            // subroutines get symbol stores for static variables and arrays
-            if (subroutineOrArray.address) {
-                subroutineOrArray.numericVariables = [];
-                subroutineOrArray.stringVariables = [];
-                subroutineOrArray.arrays = [];
+            // only add new subroutines and arrays or subroutines that overwrite arrays of the same name
+            if (currentSubroutineOrArray === undefined || currentSubroutineOrArray.address === undefined) {
+                const subroutineOrArray = subroutinesAndArrays[realName];
+
+                // subroutines get symbol stores for static variables and arrays
+                if (subroutineOrArray.address) {
+                    subroutineOrArray.numericVariables = [];
+                    subroutineOrArray.stringVariables = [];
+                    subroutineOrArray.arrays = [];
+                }
+
+                this.globalSubroutinesAndArrays[name] = subroutinesAndArrays[realName];
             }
-
-            this.globalSubroutinesAndArrays[this.symbolTable.subroutinesAndArrays.indexOf(name)] = subroutinesAndArrays[name];
         }
     }
 

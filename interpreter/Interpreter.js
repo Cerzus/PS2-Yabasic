@@ -263,9 +263,7 @@ class Interpreter {
             this.hideMessage();
 
             this.instructions = compiledSource.instructions;
-            // this.instructionLabels = compiledSource.instructionLabels;
             this.data = compiledSource.data;
-            // this.dataLabels = compiledSource.dataLabels;
 
             this.numberOfDataItems = this.data.length;
 

@@ -77,21 +77,18 @@ Interpreter.prototype.instructionCOMPILE = function () {
     if (this.isWaitingForRuntimeCompilation) {
         if (this.runtimeCompiledSource === null) {
             this.programCounter--;
-        } else { // TODO: fix for symbol table
-            // TODO: check whether completely replacing everything should or could be done more efficiently
+        } else {
             this.instructions = this.runtimeCompiledSource.instructions;
-            this.instructionLabels = this.runtimeCompiledSource.instructionLabels;
             this.data = this.runtimeCompiledSource.data;
-            this.dataLabels = this.runtimeCompiledSource.dataLabels;
-
 
             this.symbolStack.symbolTable = this.runtimeCompiledSource.symbolTable;
             this.symbolStack.setGlobalSubroutinesAndArrays({
                 ...this.runtimeCompiledSource.subroutines,
             });
+            this.symbolStack.setGlobalInstructionLabels(this.runtimeCompiledSource.instructionLabels);
+            this.symbolStack.setGlobalDataLabels(this.runtimeCompiledSource.dataLabels);
 
-
-            this.logInstructions();
+            // this.logInstructions();
 
             this.isWaitingForRuntimeCompilation = false;
             this.runtimeCompiledSource = null;
