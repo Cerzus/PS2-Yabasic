@@ -1,22 +1,4 @@
-sub g(p())
-static p(9)
-p(0)=p(0)+1
-?p(0)
-?
-for b=1 to 3
-h(p())
-next
-?
+sub g(g())
+?g()
 end sub
-
-sub h(p())
-static p(9)
-p(0)=p(0)+1
-?p(0)
-end sub
-
-dim o(8)
-o(0)=10
-for a=1 to 3
-g(o())
-next
+g()

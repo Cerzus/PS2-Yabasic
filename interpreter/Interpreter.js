@@ -8,7 +8,7 @@ class Interpreter {
     ////////////
 
     constructor() {
-        this.version = 2.66;
+        this.version = 2.64;
         this.fps = 50;
         this.cpuUsage = 1;
         this.maxInstructionsPerFrame = 140000000;
@@ -238,7 +238,7 @@ class Interpreter {
         if (error.message.constructor === Array) {
             var message = this.strings.get(...error.message);
         } else if (this.isWaitingForRuntimeCompilation) {
-            var message = this.strings.get('ParseErrorAt', this.asciiTable.toTextScreenString(error.found || ''));
+            var message = this.strings.get('ParseErrorAt', error.found !== null ? this.asciiTable.toTextScreenString(error.found) : null);
         } else {
             var message = this.strings.get('ParseErrorAt', error.found);
         }

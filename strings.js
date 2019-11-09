@@ -258,6 +258,12 @@ Strings.prototype.strings = {
         `subroutine '%s' not defined`,
     FatalError:
         `Fatal error`,
+    ArrayParamsSameNameNotImplemented:
+        `multiple array parameters of the same name are not implemented`,
+    LocalArraysToStaticNotImplemented:
+        `converting local arrays to static is not implemented`,
+    ArrayDimSizeSubroutinesNotImplemented:
+        `'arraydim()' and 'arraysize()' inside subroutines not implemented in version %d`,
     '':
         '',
 };

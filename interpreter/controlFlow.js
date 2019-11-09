@@ -86,15 +86,15 @@ Interpreter.prototype.instructionCALL_FUNCTION = function (id, numArguments) {
     this.callStack.push({
         type: 'SUBROUTINE',
         programCounter: this.programCounter,
-        arrayArguments: this.arrayArguments,
-        staticArrays: this.staticArrays,
     });
+    
     this.symbolStack.pushStackFrame(id);
 
-    this.programCounter = subroutine.address;
+    if (this.callStack.length > 10000) {
+        this.throwFatalError('OutOfMemory');
+    }
 
-    this.arrayArguments = {};
-    this.staticArrays = [];
+    this.programCounter = subroutine.address;
 };
 
 Interpreter.prototype.instructionRETURN = function (hasReturnValue) {
@@ -105,33 +105,23 @@ Interpreter.prototype.instructionRETURN = function (hasReturnValue) {
 
         if (hasReturnValue) {
             const returnValueType = this.strings.get('A' + this.valuesStackPeek().type);
-            const subroutineType = this.strings.get('A' + this.symbolStack.stackFrame.subroutine.type);
+            const subroutineType = this.strings.get('A' + this.symbolStack.getCurrentSubroutineType());
 
             if (returnValueType !== subroutineType) {
                 this.throwError('SubReturnsButShouldReturn', returnValueType, subroutineType);
             }
         } else {
-            if (this.symbolStack.stackFrame.subroutine.type === 'String') {
+            if (this.symbolStack.getCurrentSubroutineType() === 'String') {
                 this.pushString('');
             } else {
                 this.pushNumber(0);
             }
         }
 
-        for (let id of this.staticArrays) {
-            this.symbolStack.arraysScope[id] = 'STATIC';
-            const array = this.symbolStack.getArray(id);
-            this.arrayArguments[id].array.dimensions = array.dimensions;
-            this.arrayArguments[id].array.values = array.values;
-        }
-
         const context = this.callStack.pop();
         this.symbolStack.popStackFrame();
 
         this.programCounter = context.programCounter;
-
-        this.arrayArguments = context.arrayArguments;
-        this.staticArrays = context.staticArrays;
     } else {
         if (this.callStack.length === 0) {
             this.throwError('ReturnWithoutGosub');
@@ -143,23 +133,14 @@ Interpreter.prototype.instructionRETURN = function (hasReturnValue) {
 
 Interpreter.prototype.instructionSTORE_LOCAL_ARRAY_REFERENCE = function (id) {
     if (this.symbolStack.arraysScope[id]) {
-        this.throwError('AlreadyDefinedWithinSub', this.symbolStack.getArrayName(id));
+        this.throwError('ArrayParamsSameNameNotImplemented');
     }
 
     this.symbolStack.arraysScope[id] = 'LOCAL';
 
     const array = this.popValue();
 
-    this.symbolStack.getArrayStore(id)[id] = {
-        dimensions: array.dimensions,
-        values: array.values,
-    };
-
-    this.arrayArguments[id] = {
-        array,
-        dimensions: array.dimensions.slice(),
-        values: array.values.slice(),
-    };
+    this.symbolStack.getArrayStore(id)[id] = array;
 };
 
 Interpreter.prototype.instructionLOCAL_ARRAY = function (id, numDimensions) {
@@ -173,19 +154,13 @@ Interpreter.prototype.instructionLOCAL_ARRAY = function (id, numDimensions) {
 };
 
 Interpreter.prototype.instructionSTATIC_ARRAY = function (id, numDimensions) {
-    // if (this.symbolStack.arraysScope[id] === 'LOCAL') {
-    //     this.throwError('AlreadyDefinedWithinSub', this.symbolStack.getArrayName(id));
-    // }
+    if (this.symbolStack.arraysScope[id] === 'LOCAL') {
+        this.throwError('LocalArraysToStaticNotImplemented');
+    }
 
     this.symbolStack.arraysScope[id] = 'STATIC';
-    this.instructionDIM(id, numDimensions);
 
-    if (id in this.arrayArguments) {
-        if (this.staticArrays.indexOf(id) < 0) {
-            this.staticArrays.push(id);
-        }
-        this.symbolStack.arraysScope[id] = 'LOCAL';
-    }
+    this.instructionDIM(id, numDimensions);
 };
 
 Interpreter.prototype.instructionGOTO = function (labelId) {

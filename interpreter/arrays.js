@@ -123,7 +123,6 @@ Interpreter.prototype.instructionDIM = function (id, numDimensions) {
     if (numDimensions > 10) {
         this.throwError('ArrayHasMoreThan10Dimensions');
     }
-
     // if the array already exists, the number of dimensions must be the the same and the dimensions cannot shrink
     if (array !== undefined) {
         if (numDimensions !== array.dimensions.length) {
@@ -163,7 +162,7 @@ Interpreter.prototype.instructionDIM = function (id, numDimensions) {
 
     // ...otherwise, if the new dimensions are bigger than the current, copy the old values and fill the rest with default values
     // make sure not to replace the values or dimensions arrays, so local and static array reference will stay linked
-    else if (numberOfElements > array.values.length) {
+    else if (array.values !== undefined && numberOfElements > array.values.length) {
         const oldValues = array.values.slice();
         const oldDimensions = array.dimensions.slice();
 

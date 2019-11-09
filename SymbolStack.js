@@ -147,6 +147,10 @@ class SymbolStack {
         return this.symbolTable.subroutinesAndArrays[id].endsWith('$') ? 'String' : 'Number';
     }
 
+    getCurrentSubroutineType() {
+        return this.getSubroutineType(this.globalSubroutinesAndArrays.indexOf(this.stackFrame.subroutine));
+    }
+
     getLabelName(id) {
         return this.symbolTable.labels[id];
     }
