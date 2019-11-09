@@ -256,6 +256,8 @@ Strings.prototype.strings = {
         `numeric`,
     SubroutineNotDefined:
         `subroutine '%s' not defined`,
+    FatalError:
+        `Fatal error`,
     '':
         '',
 };

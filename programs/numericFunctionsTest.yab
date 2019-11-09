@@ -24,8 +24,8 @@ dim a(2,3),a$(1)
 ?asc("\d");
 ?dec("fff45345355fd545435fde45df34e5d43");
 ?instr("moi","oi");
-?peek(#1);
-?peek("moi");
+#?peek(#1);
+?peek("version");
 ?mousex;
 ?mousex("moi");
 ?mousey;

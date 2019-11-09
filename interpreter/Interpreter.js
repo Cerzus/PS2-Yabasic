@@ -238,7 +238,7 @@ class Interpreter {
         if (error.message.constructor === Array) {
             var message = this.strings.get(...error.message);
         } else if (this.isWaitingForRuntimeCompilation) {
-            var message = this.strings.get('ParseErrorAt', this.asciiTable.toTextScreenString(error.found));
+            var message = this.strings.get('ParseErrorAt', this.asciiTable.toTextScreenString(error.found || ''));
         } else {
             var message = this.strings.get('ParseErrorAt', error.found);
         }
@@ -315,7 +315,6 @@ class Interpreter {
             this.valuesStackLength = 0;
 
             this.subroutineName = null; // the current subroutine that's being executed
-            this.arrayReferenceParameters = [];
             this.callStack = []; // holds RETURN information for both subroutine calls and GOSUBs
             this.currentSubroutineLevel = 0; // how many subroutines within subroutine's we are located
 
@@ -364,24 +363,20 @@ class Interpreter {
         let running = this.programCounter < this.instructions.length;
         this.endFrame = false;
 
-        const instructions = this.instructions;
-        const programLength = instructions.length;
-        const maxInstructionsPerFrame = this.maxInstructionsPerFrame;
-
         try {
             let n = 0;
             do {
-                // run a maximum of ten instructions before checking if enough time has passed to take a break
-                for (let i = 0; i < 10 && !this.endFrame && running; i++) {
-                    const instruction = instructions[this.programCounter++];
+                // run a maximum of one hundred instructions before checking if enough time has passed to take a break
+                for (let i = 0; i < 100 && !this.endFrame && running; i++) {
+                    const instruction = this.instructions[this.programCounter++]; // cannot cache instructios, because COMPILE might add more
 
                     this[instruction.type](...instruction.arguments);
 
-                    running = this.programCounter < programLength && !this.errorsFound;
+                    running = this.programCounter < this.instructions.length && !this.errorsFound;
                 }
                 n++;
             }
-            while (!this.endFrame && running && (Date.now() < endOfAllowedRunTime) && n < maxInstructionsPerFrame);
+            while (!this.endFrame && running && (Date.now() < endOfAllowedRunTime) && n < this.maxInstructionsPerFrame);
         } catch (e) {
             if (e.constructor !== YabasicRuntimeError) {
                 throw e;

@@ -27,8 +27,8 @@ class SymbolStack {
         for (let name in subroutinesAndArrays) {
             const subroutineOrArray = subroutinesAndArrays[name];
 
-            // subroutines get symbolstores for static variables and arrays
-            if ('address' in subroutineOrArray) {
+            // subroutines get symbol stores for static variables and arrays
+            if (subroutineOrArray.address) {
                 subroutineOrArray.numericVariables = [];
                 subroutineOrArray.stringVariables = [];
                 subroutineOrArray.arrays = [];

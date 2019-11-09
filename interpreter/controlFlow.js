@@ -31,23 +31,19 @@ Interpreter.prototype.gotoOrGosub = function (label, gosub) {
 // INSTRUCTIONS //
 //////////////////
 
-
-
 Interpreter.prototype.instructionCALL_FUNCTION_OR_ARRAY = function (name, numArguments) {
     const subroutineOrArray = this.symbolStack.globalSubroutinesAndArrays[name];
-    if (subroutineOrArray !== undefined && subroutineOrArray.address) { // TODO: is this correct?
+    if (subroutineOrArray !== undefined && subroutineOrArray.address) {
         this.instructionCALL_FUNCTION(name, numArguments);
     } else {
-        this.instructionCALL_ARRAY(name, numArguments);
+        this.loadArray(name, numArguments);
     }
 };
-
-
 
 Interpreter.prototype.instructionCALL_FUNCTION = function (name, numArguments) {
     // if the requested subroutine does not exist, throw an error
     const subroutine = this.symbolStack.globalSubroutinesAndArrays[name];
-    if (subroutine === undefined) { // TODO: check when an array of the same name has been defined
+    if (subroutine === undefined) {
         this.throwError('CantFind', this.strings.get('Subroutine'), this.getRealSubroutineOrArrayName(name));
     }
 
@@ -73,10 +69,10 @@ Interpreter.prototype.instructionCALL_FUNCTION = function (name, numArguments) {
                 this.pushNumber(0);
                 break;
             case 'StringArray':
-                this.pushStringArray({ dimensions: null });
+                this.pushStringArray({ dimensions: [] });
                 break;
             case 'NumericArray':
-                this.pushNumericArray({ dimensions: null });
+                this.pushNumericArray({ dimensions: [] });
                 break;
         }
     }
@@ -87,22 +83,16 @@ Interpreter.prototype.instructionCALL_FUNCTION = function (name, numArguments) {
     this.callStack.push({
         type: 'SUBROUTINE',
         subroutineName: this.subroutineName,
-        // this array contains objects containing arrays, any problems with references?
-        // arrayReferenceParameters: this.arrayReferenceParameters.slice(),
         programCounter: this.programCounter,
     });
     this.symbolStack.pushStackFrame(name);
 
     this.subroutineName = this.getRealSubroutineOrArrayName(name);
-    // this.arrayReferenceParameters = [];
-    this.arrayArguments = [];
 
     this.programCounter = subroutine.address;
 
     this.currentSubroutineLevel++;
 };
-
-
 
 Interpreter.prototype.instructionRETURN = function (hasReturnValue) {
     if (this.subroutineName) {
@@ -125,22 +115,10 @@ Interpreter.prototype.instructionRETURN = function (hasReturnValue) {
             }
         }
 
-        // apply any local and static arrays to the arrays they were passed in as
-        // for (let name in this.arrayReferenceParameters) {
-        //     if (this.staticArrays.indexOf(name) >= 0) {
-        //         this.arrayReferenceParameters[name][0].dimensions = this.arrays[this.staticScopeName(name)].dimensions
-        //         this.arrayReferenceParameters[name][0].values = this.arrays[this.staticScopeName(name)].values;
-        //     } else {
-        //         this.arrayReferenceParameters[name][0].dimensions = this.arrayReferenceParameters[name][1].dimensions;
-        //         this.arrayReferenceParameters[name][0].values = this.arrayReferenceParameters[name][1].values;
-        //     }
-        // }
-
         const context = this.callStack.pop();
         this.symbolStack.popStackFrame();
 
         this.subroutineName = context.subroutineName;
-        // this.arrayReferenceParameters = context.arrayReferenceParameters;
 
         this.programCounter = context.programCounter;
         this.currentSubroutineLevel--;
@@ -153,8 +131,6 @@ Interpreter.prototype.instructionRETURN = function (hasReturnValue) {
     }
 };
 
-
-
 Interpreter.prototype.instructionLOCAL_ARRAY = function (arrayName, numDimensions) {
     if (this.symbolStack.arraysScope[arrayName]) {
         this.throwError('AlreadyDefinedWithinSub', this.getRealSubroutineOrArrayName(arrayName));
@@ -165,43 +141,15 @@ Interpreter.prototype.instructionLOCAL_ARRAY = function (arrayName, numDimension
     this.instructionDIM(arrayName, numDimensions);
 };
 
-
-
 Interpreter.prototype.instructionSTATIC_ARRAY = function (arrayName, numDimensions) {
+    if (this.symbolStack.arraysScope[arrayName] === 'LOCAL') {
+        this.throwError('AlreadyDefinedWithinSub', this.getRealSubroutineOrArrayName(arrayName));
+    }
+
     this.symbolStack.arraysScope[arrayName] = 'STATIC';
 
-    // if (this.localArrays.indexOf(arrayName) < 0) {
-    //     this.instructionDIM(arrayName, numDimensions);
-    // } else if (arrayName in this.arrayReferenceParameters) {
-    //     this.localArrays = this.localArrays.filter(x => x !== arrayName);
-    //     this.instructionDIM(arrayName, numDimensions);
-    //     this.localArrays.push(arrayName);
-    // } else {
-    //     delete this.arrays[this.localScopeName(arrayName)];
-    //     this.localArrays = this.localArrays.filter(x => x !== arrayName);
-    //     this.instructionDIM(arrayName, numDimensions);
-    // }
     this.instructionDIM(arrayName, numDimensions);
 };
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 Interpreter.prototype.instructionGOTO = function (label) {
     this.gotoOrGosub(label, false);
@@ -227,36 +175,47 @@ Interpreter.prototype.instructionEND = function () {
     this.programCounter = this.instructions.length;
 }
 
-Interpreter.prototype.instructionEXECUTE$ = function (numArguments) { // TODO: fix for symbol table
+Interpreter.prototype.instructionEXECUTE$ = function (numArguments) {
     if (numArguments === 0 || this.valuesStackPeek(numArguments - 1).type !== 'String') {
         this.throwError('NeedStringAsFunctionName');
     }
 
-    const name = this.valuesStackExtract(numArguments - 1).value;
+    const realName = this.valuesStackExtract(numArguments - 1).value;
 
-    if (!name.endsWith('$')) {
-        this.throwError('ExpectingNameOfFunctionNot', this.strings.get('String'), name);
-    } else if (!(name in this.subroutines)) {
+    if (!realName.endsWith('$')) {
+        this.throwError('ExpectingNameOfFunctionNot', this.strings.get('String'), realName);
+    }
+
+    const name = this.symbolStack.symbolTable.subroutinesAndArrays.indexOf(realName);
+    const subroutine = this.symbolStack.globalSubroutinesAndArrays[name];
+
+    if (subroutine === undefined || subroutine.dimensions) {
         this.throwError('SubroutineNotDefined', this.library + '.' + name);
     }
 
     this.instructionCALL_FUNCTION(name, numArguments - 1);
 }
 
-Interpreter.prototype.instructionEXECUTE = function (numArguments) { // TODO: fix for symbol table
+Interpreter.prototype.instructionEXECUTE = function (numArguments) {
     if (numArguments === 0 || this.valuesStackPeek(numArguments - 1).type !== 'String') {
         this.throwError('NeedStringAsFunctionName');
     }
 
-    const name = this.valuesStackExtract(numArguments - 1).value;
+    const realName = this.valuesStackExtract(numArguments - 1).value;
 
-    if (name.endsWith('$')) {
-        this.throwError('ExpectingNameOfFunctionNot', this.strings.get('Numeric'), name);
-    } else if (!(name in this.subroutines)) {
+    if (realName.endsWith('$')) {
+        this.throwError('ExpectingNameOfFunctionNot', this.strings.get('Numeric'), realName);
+    }
+
+    const name = this.symbolStack.symbolTable.subroutinesAndArrays.indexOf(realName);
+    const subroutine = this.symbolStack.globalSubroutinesAndArrays[name];
+
+    if (subroutine === undefined || subroutine.dimensions) {
         this.throwError('SubroutineNotDefined', this.library + '.' + name);
     }
 
     this.instructionCALL_FUNCTION(name, numArguments - 1);
+
 }
 
 Interpreter.prototype.instructionLOCAL_STRING_VARIABLE = function (variableName) {

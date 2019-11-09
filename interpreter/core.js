@@ -84,6 +84,13 @@ Interpreter.prototype.instructionCOMPILE = function () {
             this.data = this.runtimeCompiledSource.data;
             this.dataLabels = this.runtimeCompiledSource.dataLabels;
 
+
+            this.symbolStack.symbolTable = this.runtimeCompiledSource.symbolTable;
+            this.symbolStack.setGlobalSubroutinesAndArrays({
+                ...this.runtimeCompiledSource.subroutines,
+            });
+
+
             this.logInstructions();
 
             this.isWaitingForRuntimeCompilation = false;

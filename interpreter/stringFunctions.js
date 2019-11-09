@@ -7,7 +7,7 @@ Interpreter.prototype.months = 'Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec'
 // UTILITY FUNCTIONS //
 ///////////////////////
 
-Interpreter.prototype.modifyStringVariable = function (replaceStringPart, hasIndex, name, hasLength) {
+Interpreter.prototype.modifyStringVariable = function (replaceStringPart, hasLength, name, hasIndex) {
     this.instructionLOAD_STRING_VARIABLE(name);
 
     const oldString = this.popString();
@@ -21,7 +21,7 @@ Interpreter.prototype.modifyStringVariable = function (replaceStringPart, hasInd
     this.instructionSTORE_STRING_VARIABLE(name);
 };
 
-Interpreter.prototype.modifyStringArray = function (replaceStringPart, hasIndex, name, numArguments, hasLength) {
+Interpreter.prototype.modifyStringArray = function (replaceStringPart, hasLength, name, numArguments, hasIndex) {
     const replacementString = this.popString();
     if (hasLength) {
         // ~~? 2.64: TODO, 2.66: TODO 
@@ -29,13 +29,13 @@ Interpreter.prototype.modifyStringArray = function (replaceStringPart, hasIndex,
     }
     // ~~? 2.64: TODO, 2.66: TODO 
     const index = hasIndex ? ~~this.popNumber() : null;
-    const oldString = this.popString();
+    const oldString = this.popString()+'';
     if (!hasLength) {
         var length = Math.max(oldString.length, replacementString.length);
     }
 
     this.pushString(replaceStringPart(oldString, replacementString, length, index));
-    this.instructionSTORE_ARRAY(name, numArguments);
+    this.instructionSTORE_ARRAY_ELEMENT(name, numArguments);
 };
 
 Interpreter.prototype.replaceStringLeft = function (oldString, replacementString, length) {
@@ -91,27 +91,27 @@ Interpreter.prototype.getFirstTokenAndPushTheRest = function (string, separator,
 //////////////////
 
 Interpreter.prototype.instructionLEFT$_VARIABLE = function (name) {
-    this.modifyStringVariable(this.replaceStringLeft, false, name);
+    this.modifyStringVariable(this.replaceStringLeft, true, name);
 };
 
 Interpreter.prototype.instructionLEFT$_ARRAY = function (name, numArguments) {
-    this.modifyStringArray(this.replaceStringLeft, false, name, numArguments);
+    this.modifyStringArray(this.replaceStringLeft, true, name, numArguments);
 };
 
 Interpreter.prototype.instructionRIGHT$_VARIABLE = function (name) {
-    this.modifyStringVariable(this.replaceStringRight, false, name);
+    this.modifyStringVariable(this.replaceStringRight, true, name);
 };
 
 Interpreter.prototype.instructionRIGHT$_ARRAY = function (name, numArguments) {
-    this.modifyStringArray(this.replaceStringRight, false, name, numArguments);
+    this.modifyStringArray(this.replaceStringRight, true, name, numArguments);
 };
 
 Interpreter.prototype.instructionMID$_VARIABLE = function (name, hasLength) {
-    this.modifyStringVariable(this.replaceStringMid, true, name, hasLength);
+    this.modifyStringVariable(this.replaceStringMid, hasLength, name, true);
 };
 
 Interpreter.prototype.instructionMID$_ARRAY = function (name, numArguments, hasLength) {
-    this.modifyStringArray(this.replaceStringMid, true, name, numArguments, hasLength);
+    this.modifyStringArray(this.replaceStringMid, hasLength, name, numArguments, true);
 };
 
 Interpreter.prototype.instructionLEFT$ = function () {
@@ -239,7 +239,7 @@ Interpreter.prototype.instructionSPLIT$_ARRAY = function (hasSeparator, removeEm
     const string = this.popString();
 
     const token = this.getFirstTokenAndPushTheRest(string, separator, removeEmptyStrings);
-    this.instructionSTORE_ARRAY(name, numArguments);
+    this.instructionSTORE_ARRAY_ELEMENT(name, numArguments);
     this.pushString(token);
 };
 

@@ -1,13 +1,846 @@
-sub g(p(),p(),p())
-?j(0)
-?p(0)
-p(0)=12
-?j(0)
+rem YAPOKER v0.85 for YABASIC
+rem Written by balroq (2002)
+rem balroq@vip.fi
+gosub jojo
+
+open window 640,512
+
+dim butt$(10)
+dim cval(5)
+dim f(4)
+dim flush(5)
+dim lock(5)
+dim m(5,12)
+dim o(40)
+dim objdata(17,16)
+dim rcv(13)
+dim rcval(5)
+dim used(53)
+dim win$(11)
+dim wincash(11)
+
+zztogame()
+
+sub drawtable()
+ setrgb 0,0,0,40
+ clear window
+ wait 1
+ for a=1 to 40
+  setrgb 1,0,0,100
+  line 0,a-1 to 640,a-1
+  setrgb 1,255,255,255
+  line 0,a to 640,a
+  wait .04
+ next a
+ for a=42 to 252 step 4
+  ww(a)
+  wait .04
+ next a
 end sub
 
-dim j(9),k(9,9),l(9,9,9)
-j(0)=3
-k(0,0)=4
-l(0,0,0)=5
-g(j(),k())
-?j(0)
+sub setupgame()
+ credits=20
+ bet=1
+ wins=0
+ mode=1
+ maxwin=100
+end sub
+
+sub ww(a)
+ setrgb 1,40,40,80
+ fill rectangle 296,41 to 466,a
+ setrgb 1,40,0,40
+ fill rectangle 466,41 to 506,a
+ setrgb 1,240,160,240
+ line 506,41 to 506,a
+ line 466,a to 506,a
+ setrgb 1,160,160,240
+ line 296,a to 465,a
+ line 296,41 to 296,a
+end sub
+
+sub winlist()
+ label backcode1
+ win=0
+ ww(252)
+ setrgb 1,0,0,40
+ fill rectangle 296,41 to 507,64
+ setrgb 1,240,160,240
+ line 466,64 to 506,64
+ setrgb 1,160,160,240
+ line 296,64 to 465,64
+ for a=1 to 11
+  if a=w then
+   co=255
+   win=wincash(a)*bet
+  else
+   co=160
+  fi
+  setrgb 1,co,co,255
+  text 306,64+a*16,win$(a)+" "+str$(wincash(a)*bet)
+ next a
+ if w>0 then
+  mode=3
+  buttons()
+  mw()
+ else
+  betcheck()
+ fi
+end sub
+
+sub betcheck()
+ if mode<>5 then
+  if bet>credits+wins then
+   bet=credits+wins
+   if bet<1 then
+    gameover()
+    sele(9)
+    return
+   fi
+   score()
+   winlist()
+  fi
+ fi
+end sub
+
+sub gameover()
+ wait 2
+ setrgb 1,0,0,0
+ fill rectangle 160,128 to 480,384
+ setrgb 1,200,200,0
+ rectangle 160,128 to 480,384
+ text 172,148,"Yapoker messager"
+ text 172,176,"OUT OF CREDITS!"
+ text 172,204,"RESTART GAME?"
+ tmp(200,100)
+ rstatus=1
+ label loop2
+ kk=peek("port1")
+ if kk=16384 then
+  if rstatus=1 then
+   setupgame()
+   drawall()
+   return
+  else
+   end
+  fi
+ fi
+ if kk=32 then
+  tmp(100,200)
+  rstatus=0
+ fi
+ if kk=128 then
+  tmp(200,100)
+  rstatus=1
+ fi
+ goto loop2
+end sub
+
+sub tmp(tm,tm2)
+ setrgb 1,tm,tm,0
+ text 222,232,"YES"
+ setrgb 1,tm2,tm2,0
+ text 392,232,"NO"
+end sub
+
+sub butsel()
+ bx=blq*96
+ by=0
+ if blq>5 then
+  by=36:bx=bx-576
+ fi
+ setrgb 1,0,255,255
+ sel()
+end sub
+
+sub sel()
+ rectangle bx+30,by+428 to bx+122,by+460
+ rectangle bx+29,by+427 to bx+123,by+461
+end sub
+
+sub clrsel()
+ setrgb 1,0,0,40
+ sel()
+end sub
+
+sub buttons()
+ for b=0 to 1
+  for a=0 to 5
+   bt=bt+1
+   ss=m(mode,bt)
+   zz=1
+   if ss=0 zz=2
+   setrgb 1,128/zz,128/zz,168/zz
+   setrgb 2,200/zz,200/zz,255/zz
+   setrgb 3,128/zz,128/zz,168/zz
+   a1=32+a*96
+   a2=430+b*36
+   a3=122+a*96
+   a4=460+b*36
+   gtriangle a1,a2 to a3,a2 to a3,a4
+   gtriangle a1,a2 to a1,a4 to a3,a4
+   setrgb 1,255/zz,255/zz,255/zz
+   text 36+a*96+addi,450+b*36,butt$(ss)
+  next a
+ next b
+ bt=0
+end sub
+
+sub drawall()
+ drawstuff()
+ buttons()
+ score()
+ winlist()
+ butsel()
+end sub
+
+sub drawstuff()
+ setrgb 1,0,0,40
+ setrgb 2,0,0,40
+ setrgb 3,0,0,40
+ gtriangle 0,40 to 640,40 to 640,512
+ gtriangle 0,40 to 0,512 to 640,512
+ setrgb 1,255,255,255
+ line 0,40 to 640,40
+end sub
+
+sub score()
+ setrgb 1,0,0,100
+ fill rectangle 0,0 to 640,40
+ setrgb 1,200,200,255
+ text 30,27,"CREDITS: "+str$(credits)
+ text 280,27,"BET: "+str$(bet)
+ text 500,27,"WINS: "+str$(wins)
+end sub
+
+sub zztogame()
+ setdispbuf curbuffer
+ mode=1
+ drawtable()
+ initgame()
+ drawstuff()
+ score()
+ winlist()
+ butsel()
+ buttons()
+ sele(9)
+ label loop
+  readpad()
+ goto loop
+end sub
+
+sub initgame()
+ restore windata
+ for a=1 to 11
+  read win$(a),wincash(a)
+ next a
+ restore butdata
+ for a=1 to 10
+  read butt$(a)
+ next a
+ restore buttext
+ for b=1 to 5
+  for a=1 to 12
+   read m(b,a)
+  next a
+ next b
+ restore objects
+ for b=1 to 17
+  for a=1 to 16
+   read objdata(b,a)
+  next a
+ next b
+ restore odata
+  for a=0 to 40
+   read o(a)
+  next a
+ setupgame()
+ blq=0
+end sub
+
+sub readpad()
+ k=peek("port1")
+ bu=m(mode,blq+1)
+ if and(k,16384)<>0 and bu<>0 click(bu)
+ oldindex=blq
+ if and(k,64)<>0 and blq<6 then
+  clrsel()
+  blq=blq+6
+  elsif and(k,16)<>0 and blq>5 then
+  clrsel()
+  blq=blq-6
+  elsif and (k,128)<>0 then
+  clrsel()
+  blq=blq-1
+  if blq=5 blq=11
+  if blq=-1 blq=5
+  elsif and(k,32)<>0 then
+  clrsel()
+  blq=blq+1
+  if blq=6 blq=0
+  if blq=12 blq=6
+ fi
+ if oldindex<>blq then
+  butsel()
+  norepeat()
+ fi
+end sub
+
+sub click(bu)
+ if bu=1 or bu=2 lockem()
+ if bu=3 double()
+ if bu=4 small()
+ if bu=5 big()
+ if bu=6 collect()
+ if bu=7 deal()
+ if bu=8 nudge(1)
+ if bu=9 nudge(-1)
+ if bu=10 bet()
+ norepeat()
+end sub
+
+sub small()
+ if dc<7 then
+  right()
+ else
+  wrong()
+ fi
+end sub
+
+sub big()
+ if dc>7 or dc=-1 then
+  right()
+ else
+  wrong()
+ fi
+end sub
+
+sub right()
+ setrgb 1,0,0,40
+ fill rectangle 32,274 to 506,404
+ setrgb 1,255,255,255
+ text 320,343,"\n\nYOU WON\n\n"+str$(doublepot)+" Credits"
+ qq(doucard,3)
+ win=doublepot
+ mode=3
+ sele(6)
+ mw()
+end sub
+
+sub mw()
+ if win>maxwin then
+  m(3,7)=0
+  sele(10)
+ fi
+ buttons()
+end sub
+
+sub sele(bb)
+ clrsel()
+ blq=bb
+ butsel()
+end sub
+
+sub wrong()
+ setrgb 1,0,0,40
+ fill rectangle 32,274 to 506,404
+ setrgb 1,255,255,255
+ text 320,343,"\n\nDoublepot\n\n0 Credits"
+ qq(doucard,3)
+ win=0
+ mode=1
+ clearstuff()
+ buttons()
+ betcheck()
+ winlist()
+ sele(11)
+end sub
+
+sub qq(dcard,pos)
+ if dcard=53 then
+  dc=-1
+  goto sc5
+ fi
+ dc=mod(dcard,13)
+ if dc=0 dc=13
+ for c=0 to 3
+  if dcard>c*13 and dcard<14+c*13 fl=c+1
+ next c
+ label sc5
+ a1=32+(pos-1)*96
+ a2=a1+90
+ setrgb 1,125,125,145
+ setrgb 2,125,125,145
+ setrgb 3,185,185,205
+ gtriangle a1,274 to a2,274 to a2,404
+ gtriangle a1,274 to a1,404 to a2,404
+ if dc=-1 then
+  setrgb 1,0,45,45
+  for c=0 to 4
+   text 70+(pos-1)*96,298+c*22,mid$("JOKER",c+1,1)
+  next c
+  return
+ fi
+ red=100
+ if fl<3 red=0
+ setrgb 1,red,0,0
+ writeobject(dc,32+(pos-1)*96,278,1.5)
+ writeobject(fl+13,36+(pos-1)*96,308,1.5)
+end sub
+
+
+label jojo
+compile("0
+data \"      Fullhouse\",10
+data \"          Flush\",5
+data \"       Straight\",4
+data \"Three of a kind\",3
+data \"      Two pairs\",2
+data \"Jacks or better\",1
+
+label butdata
+data \"  Lock  \"
+data \" Unlock \"
+data \" Double \"
+data \" Small \"
+data \"  Big  \"
+data \"Collect\"
+data \"  Deal  \"
+data \"Nudge up\"
+data \"Nudge dn\"
+data \"  Bet  \"
+
+label buttext
+data 00,00,00,00,00,00,00,00,00,10,00,07
+data 01,01,01,01,01,00,00,00,00,00,00,00
+data 00,00,00,00,00,00,03,00,00,00,06,00
+data 00,00,00,00,00,00,00,04,05,00,00,00
+data 08,08,08,08,08,00,09,09,09,09,09,07
+
+label odata
+data 16380,30750,61455,61440,30720,00030,00015,65532
+data 28672,16320,65534,65535,16383,30735,15360,07680
+data 03840,01920,00960,61470,16271,31695,61935,64527
+data 31759,63518,57340,15375,08191,00384,02016,04080
+data 08184,32766,64959,32190,14748,31134,14364,31806
+data 65151
+
+label objects
+data 00,01,02,02,02,02,02,02,11,02,02,02,02,02,02,02
+data 00,01,02,02,03,03,04,00,05,06,06,06,06,06,05,07
+data 00,01,02,02,03,03,08,09,08,03,03,02,02,02,01,00
+data 02,02,02,02,02,02,02,10,03,03,03,03,03,03,03,03
+data 11,06,06,06,06,06,06,12,04,03,03,03,02,02,01,00
+data 00,01,02,02,06,06,06,12,13,02,02,02,02,02,01,00
+data 11,03,03,03,04,14,15,16,17,18,18,18,18,18,18,18
+data 00,01,02,02,02,02,01,00,01,02,02,02,02,02,01,00
+data 00,01,02,02,02,02,19,07,03,03,03,03,02,02,01,00
+data 20,21,22,22,22,22,22,22,22,22,22,22,22,22,21,20
+data 03,03,03,03,03,03,03,03,03,03,03,03,02,02,01,00
+data 00,01,02,02,02,02,02,02,02,02,02,02,23,24,25,26
+data 02,02,02,02,02,13,27,28,27,13,02,02,02,02,02,02
+data 29,18,30,31,32,00,33,11,11,11,34,35,36,29,18,31
+data 18,30,30,30,30,18,37,34,11,11,34,37,29,29,18,31
+data 29,18,30,31,32,00,33,11,11,33,00,32,31,30,18,29
+data 38,39,40,11,11,11,11,11,11,33,00,32,31,30,18,29
+sub double()
+ doublepot=win*2
+ mode=4
+ buttons()
+ clearcards()
+ u=52
+ if bet>2 u=53
+ doucard=int(ran(u)+1)
+ dc=mod(doucard,13)
+ if doucard=53 dc=-1
+ if dc=0 dc=13
+ setrgb 1,255,255,255
+ text 320,343,\"\n\nDoublepot\n\n\"+str$(doublepot)+\" Credits\"
+ cardback(3)
+end sub
+
+sub cardback(r)
+ setrgb 1,80,0,0
+ setrgb 2,r*30,0,255
+ setrgb 3,80,0,80
+ a1=32+(r-1)*96
+ a2=122+(r-1)*96
+ gtriangle a1,274 to a1,404 to a2,404
+ gtriangle a1,274 to a2,274 to a2,404
+end sub
+
+sub collect()
+ wins=wins+win
+ clearstuff()
+ mode=1
+ score()
+ buttons()
+ sele(11)
+end sub
+
+sub lockem()
+ lock(blq+1)=1-lock(blq+1)
+ if lock(blq+1)=1 then
+  m(2,blq+1)=2
+ else
+  m(2,blq+1)=1
+ fi
+ b=0
+ for a=1 to 5
+  b=b+lock(a)
+ next a
+ if b=0 then
+  m(2,12)=0
+ else
+  m(2,12)=7
+ fi
+ buttons()
+end sub
+
+sub clearcards()
+ setrgb 1,0,0,40
+ fill rectangle 32,274 to 506,404
+ wait .5
+end sub
+
+sub deal()
+ if mode=1 then
+  clearcards()
+  clearstuff()
+  submoney()
+  randcards()
+  checkrealvalues()
+  drawbacks()
+  drawcards()
+  sele(0)
+  goto sc4
+ fi
+ if mode=2 then
+  discards()
+  goto sc4
+ fi
+ if mode=5 then
+  cnu()
+  wincheck()
+ fi
+ label sc4
+end sub
+
+sub drawbacks()
+ for c=1 to 5
+  cardback(c)
+  wait .2
+ next c
+ wait .5
+end sub
+
+sub discards()
+ setrgb 1,0,0,40
+ for a=1 to 5
+  if lock(a)=0 then
+   fill rectangle 32+(a-1)*96,274 to 122+(a-1)*96,404
+   used(cval(a))=0
+  fi
+  if cval(a)=53 then
+   j=0
+   goto sc3
+  fi
+  rcval(a)=mod(cval(a),13)
+  if rcval(a)=0 rcval(a)=13
+  rcv(rcval(a))=rcv(rcval(a))-1
+  for b=0 to 3
+   if cval(a)>b*13 and cval(a)<(b+1)*13+1 then
+    f(b+1)=f(b+1)-1
+    flush(a)=0
+   fi
+  next b
+  label sc3
+ next a
+ wait 1
+ randcards()
+ checkrealvalues()
+ drawcards()
+ mode=0
+ wincheck()
+end sub
+
+sub submoney()
+ credits=credits-bet
+ if credits<0 then
+  wins=wins+credits
+  credits=0
+ fi
+ score()
+end sub
+
+sub bet()
+ bet=bet+1
+ if bet>5 bet=1
+ if bet>credits+wins bet=1
+ score()
+ winlist()
+end sub
+
+sub norepeat()
+ while(peek(\"port1\")<>0)
+ wend
+end sub
+
+sub nudges()
+ na=int(ran(15)+1)
+ n$=\"Nudges available (\"+str$(na)+\")\"
+ for a=1 to 4
+  cnu()
+  wait .1
+  nu()
+  wait .1
+ next a
+ mode=5
+ for a=1 to 5
+  m(5,a)=8
+  m(5,6+a)=9
+  if cval(a)=53 then
+   m(5,a)=0
+   m(5,6+a)=0
+  fi
+ next a
+ buttons()
+end sub
+
+sub nu()
+ setrgb 1,200,200,0
+ text 48,150,n$
+end sub
+
+sub cnu()
+ setrgb 1,0,0,40
+ fill rectangle 48,136 to 260,156
+end sub
+
+sub nudge(dire)
+ cnu()
+ na=na-1
+ n$=\"Nudges available (\"+str$(na)+\")\"
+ nu()
+ for a=1 to 5
+  rcv(rcval(a))=rcv(rcval(a))-1
+  f(a-1)=0
+ next a
+ pos=mod(blq,6)+1
+ o1=cval(pos)
+ ov=o1
+ o2=mod(o1,13)
+ if o2=0 o2=13
+ while (used(o1)=1)
+  o1=o1+dire
+  o2=o2+dire
+  if o2<1 then
+   o1=o1+13
+   o2=13
+  fi
+  if o2>13 then
+   o1=o1-13
+   o2=1
+  fi
+ wend
+ used(ov)=0
+ used(o1)=1
+ cval(pos)=o1
+ checkrealvalues()
+ qq(cval(pos),pos)
+ if na=0 then
+  cnu()
+  mode=1
+  wincheck()
+ fi
+ return
+end sub
+
+sub checkrealvalues()
+ for a=1 to 5
+  if cval(a)=53 then
+   j=1
+   goto sc1
+  fi
+  rcval(a)=mod(cval(a),13)
+  if rcval(a)=0 rcval(a)=13
+  rcv(rcval(a))=rcv(rcval(a))+1
+  for b=0 to 3
+   if cval(a)>b*13 and cval(a)<(b+1)*13+1 then
+    f(b+1)=f(b+1)+1
+    flush(a)=b+1
+   fi
+  next b
+  label sc1
+ next a
+end sub
+
+sub clearstuff()
+ j=0
+ s=0
+ schk=0
+ w=0
+ win=0
+ m(3,7)=3
+ for a=1 to 53
+  cval(mod(a,6))=0
+  f(mod(a,5))=0
+  flush(mod(a,6))=0
+  lock(mod(a,6))=0
+  m(2,mod(a,6))=1
+  rcv(mod(a,14))=0
+  rcval(mod(a,6))=0
+  used(a)=0
+ next a
+end sub
+
+sub randcards()
+ for a=1 to 5
+  if lock(a)=0 then
+   label randnew
+   newcard=int(ran(53)+1)
+   if used(newcard)=1 goto randnew
+   if newcard=53 and bet<3 goto randnew
+   used(newcard)=1
+   cval(a)=newcard
+  fi
+ next a
+end sub
+
+sub writeobject(obj,objx,objy,size)
+ for wb=1 to 16
+  wz=objdata(obj,wb)
+  for wa=0 to 15
+   if and(o(wz),2^wa)<>0 then
+    nx=objx+wa*size
+    ny=objy+wb*size
+    fill rectangle nx,ny to nx+size,ny+size
+   fi
+  next wa
+ next wb
+end sub
+
+sub drawcards()
+ for a=1 to 5
+  if lock(a)=0 then
+   qq(cval(a),a)
+   wait .25
+  fi
+ next a
+ mode=2
+ buttons()
+end sub
+
+sub wincheck()
+ for a=1 to 4
+  if f(a)=5-j then
+   w=7
+   goto sc2
+  fi
+ next a
+ if j=1 then
+  for a=1 to 13
+   if rcv(a)=4 then
+    w=2
+    goto sc2
+   fi
+   if rcv(a)=3 then
+    w=4
+    goto sc2
+   fi
+   if rcv(a)=2 then
+    c=a+1
+    for b=c to 13
+     if rcv(b)=2 then
+      w=6
+      goto sc2
+     fi
+    next b
+    w=9
+    goto sc2
+   fi
+  next a
+ fi
+ if j=0 then
+  for a=1 to 13
+   if rcv(a)=4 then
+    w=4
+    goto sc2
+   fi
+   if rcv(a)=3 then
+    w=9
+    c=a+1
+    for b=c to 13
+     if rcv(b)=2 then
+      w=6
+      goto sc2
+     fi
+    next b
+   fi
+   if rcv(a)=2 then
+    c=a+1
+    for b=c to 13
+     if rcv(b)=3 then
+      w=6
+      goto sc2
+     fi
+     if rcv(b)=2 then
+      w=10
+      goto sc2
+     fi
+    next b
+   fi
+  next a
+ fi
+ label sc2
+ schk=0
+ for a=1 to 13
+  if rcv(a)>1 schk=1
+ next a
+ if schk=0 then
+  for a=1 to 9
+   if rcv(a)+rcv(a+1)+rcv(a+2)+rcv(a+3)+rcv(a+4)=5-j s=1
+  next a
+  if rcv(10)+rcv(11)+rcv(12)+rcv(13)+rcv(1)=5-j s=2
+ fi
+ if s=1 and w=7 w=3
+ if s=2 and w=7 w=1
+ if s=2 and w=0 then
+  w=5
+  s=0
+ fi
+ if s=1 and w=0 then
+  w=8
+  s=0
+ fi
+ if w=0 then
+  if rcv(1)=2-j w=11
+  if rcv(11)=2-j w=11
+  if rcv(12)=2-j w=11
+  if rcv(13)=2-j w=11
+ fi
+ if w=0 then
+  if int(ran(6)+1)=1 then
+   nudges()
+  else
+   clearstuff()
+   mode=1
+   buttons()
+  fi
+ else
+  sele(6)
+ fi
+ winlist()
+end sub
+
+")
+return
+
+
+
+label windata
+data "    Royal flush",50
+data " Five of a kind",20
+data " Straight flush",20
+data " Four of a kind",15
+data "     Ten-to-ace",12
