@@ -169,7 +169,7 @@ Parser.prototype.evaluateREAD_STATEMENT = function (node) {
 };
 
 Parser.prototype.evaluateRESTORE_STATEMENT = function (node) {
-    this.addInstruction(node.line, 'RESTORE', node.label);
+    this.addInstruction(node.line, 'RESTORE', node.label !== null ? this.label(node.label) : null);
 };
 
 Parser.prototype.evaluateBELL_STATEMENT = function (node) {

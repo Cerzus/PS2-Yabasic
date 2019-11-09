@@ -1,12 +1,4 @@
-for b=0 to 200000
-a=a:a=a:a=a:a=a:a=a:a=a:a=a:a=a:a=a:a=a:
-a=a:a=a:a=a:a=a:a=a:a=a:a=a:a=a:a=a:a=a:
-a=a:a=a:a=a:a=a:a=a:a=a:a=a:a=a:a=a:a=a:
-a=a:a=a:a=a:a=a:a=a:a=a:a=a:a=a:a=a:a=a:
-a=a:a=a:a=a:a=a:a=a:a=a:a=a:a=a:a=a:a=a:
-a=a:a=a:a=a:a=a:a=a:a=a:a=a:a=a:a=a:a=a:
-a=a:a=a:a=a:a=a:a=a:a=a:a=a:a=a:a=a:a=a:
-a=a:a=a:a=a:a=a:a=a:a=a:a=a:a=a:a=a:a=a:
-a=a:a=a:a=a:a=a:a=a:a=a:a=a:a=a:a=a:a=a:
-a=a:a=a:a=a:a=a:a=a:a=a:a=a:a=a:a=a:a=a:
-next
+5sub a()
+goto 5
+end sub
+a()

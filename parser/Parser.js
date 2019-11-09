@@ -17,15 +17,19 @@ class Parser {
         if (!compilingAtRuntime) {
             this.subroutines = {};
             this.instructions = [];
-            this.instructionLabels = {};
+            this.instructionLabels = [];
             this.data = [];
-            this.dataLabels = {};
+            this.dataLabels = [];
             this.documentation = [''];
+
+            this.internalLabels = [];
+            this.subroutineNames = [];
 
             this.symbolTable = {
                 stringVariables: [],
                 numericVariables: ['numparams', 'PI', 'pi', 'EULER', 'euler'],
                 subroutinesAndArrays: ['docu$'],
+                labels: [],
             };
         }
 
@@ -33,8 +37,8 @@ class Parser {
             version,
             symbolTable: this.symbolTable,
 
-            internalLabels: Object.keys(this.instructionLabels),
-            subroutineNames: Object.keys(this.subroutines),
+            internalLabels: this.internalLabels,
+            subroutineNames: this.subroutineNames,
         });
 
         if (!compilingAtRuntime) {
@@ -134,5 +138,13 @@ class Parser {
 
     subroutineOrArray(subroutineOrArrayName) {
         return this.symbolTable.subroutinesAndArrays.indexOf(subroutineOrArrayName);
+    }
+
+    label(labelName) {
+        return this.symbolTable.labels.indexOf(labelName);
+    }
+
+    labels(labelNames) {
+        return labelNames.map(labelName => this.symbolTable.labels.indexOf(labelName));
     }
 }

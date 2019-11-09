@@ -38,6 +38,14 @@ class SymbolStack {
         }
     }
 
+    setGlobalInstructionLabels(instructionLabels) {
+        this.instructionLabels = instructionLabels;
+    }
+
+    setGlobalDataLabels(dataLabels) {
+        this.dataLabels = dataLabels;
+    }
+
     pushStackFrame(subroutineName) {
         this.stackFrame = this.stackFrames[this.stackFrames.push({
             subroutine: subroutineName !== null ? this.globalSubroutinesAndArrays[subroutineName] : null,

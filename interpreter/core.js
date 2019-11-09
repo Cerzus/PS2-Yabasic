@@ -340,11 +340,13 @@ Interpreter.prototype.instructionRESTORE = function (label) {
     if (label === null) {
         this.dataIndex = 0;
     } else {
-        if (!(label in this.dataLabels)) {
-            this.throwError('CantFindLabel', this.library + '.' + label);
+        const dataIndex = this.symbolStack.dataLabels[label];
+
+        if (dataIndex === undefined) {
+            this.throwError('CantFindLabel', this.library + '.' + this.getRealLabelName(label));
         }
 
-        this.dataIndex = this.dataLabels[label];
+        this.dataIndex = dataIndex;
         this.numberOfDataItems = this.data.length;
     }
 };

@@ -169,3 +169,7 @@ Interpreter.prototype.getRealSubroutineOrArrayName = function (name) {
     return this.symbolStack.symbolTable.subroutinesAndArrays[name];
 };
 
+Interpreter.prototype.getRealLabelName = function (name) {
+    return this.symbolStack.symbolTable.labels[name];
+};
+

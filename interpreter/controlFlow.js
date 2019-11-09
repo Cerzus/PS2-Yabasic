@@ -5,16 +5,18 @@
 ///////////////////////
 
 Interpreter.prototype.gotoOrGosub = function (label, gosub) {
-    if (this.subroutineName) {
-        const scopedLabel = this.subroutineName + '/' + label;
+    if (this.symbolStack.stackFrame.subroutine) {
+        var instructionIndex = this.symbolStack.stackFrame.subroutine.instructionLabels[label];
 
-        if (!(scopedLabel in this.instructionLabels)) {
-            this.throwError(['CantFindLabel', 'NotInThisSub'], label);
+        if (instructionIndex === undefined) {
+            this.throwError(['CantFindLabel', 'NotInThisSub'], this.getRealLabelName(label));
         }
+    } else {
+        var instructionIndex = this.symbolStack.instructionLabels[label];
 
-        label = scopedLabel;
-    } else if (!(label in this.instructionLabels)) {
-        this.throwError('CantFindLabel', label);
+        if (instructionIndex === undefined) {
+            this.throwError('CantFindLabel', this.getRealLabelName(label));
+        }
     }
 
     if (gosub) {
@@ -24,7 +26,7 @@ Interpreter.prototype.gotoOrGosub = function (label, gosub) {
         });
     }
 
-    this.programCounter = this.instructionLabels[label];
+    this.programCounter = instructionIndex;
 };
 
 //////////////////

@@ -79,9 +79,17 @@
         return createNode({ type: "SUBROUTINE_STATEMENT", name, parameters, body });
     }
 
-    function addFunctionOrArrayNameToSymbolTable(name) {
+    function addFunctionOrArrayToSymbolTable(name) {
         if (options.symbolTable.subroutinesAndArrays.indexOf(name) < 0) {
             options.symbolTable.subroutinesAndArrays.push(name);
+        }
+
+        return name;
+    }
+
+    function addLabelToSymbolTable(name) {
+        if (options.symbolTable.labels.indexOf(name) < 0) {
+            options.symbolTable.labels.push(name);
         }
 
         return name;
@@ -143,7 +151,7 @@ CommentedLine
 
 StringScalarOrArray
     = name:StringNonArrayIdentifier _ index:Arguments
-        { return createNode({ type: "STRING_ARRAY_MUTATOR", array: addFunctionOrArrayNameToSymbolTable(name), index }); }
+        { return createNode({ type: "STRING_ARRAY_MUTATOR", array: addFunctionOrArrayToSymbolTable(name), index }); }
     / StringVariable
 
 ArrayIdentifier
@@ -164,11 +172,11 @@ _Array
 
 StringArray
     = name:StringArrayIdentifier
-        { return createNode({ type: "STRING_ARRAY", name: addFunctionOrArrayNameToSymbolTable(name) }); }
+        { return createNode({ type: "STRING_ARRAY", name: addFunctionOrArrayToSymbolTable(name) }); }
 
 NumericArray
     = name:NumericArrayIdentifier
-        { return createNode({ type: "NUMERIC_ARRAY", name: addFunctionOrArrayNameToSymbolTable(name) }); }
+        { return createNode({ type: "NUMERIC_ARRAY", name: addFunctionOrArrayToSymbolTable(name) }); }
 
 StringArrayIdentifier
     = id:StringNonArrayIdentifier _ "(" _ ")" { return id; }
@@ -605,11 +613,11 @@ FunctionOrArray
 
 StringFunctionOrArray
     = name:StringNonArrayIdentifier _ args:Arguments
-        { return createNode({ type: "STRING_FUNCTION_OR_ARRAY", name: addFunctionOrArrayNameToSymbolTable(name), arguments: args }); }
+        { return createNode({ type: "STRING_FUNCTION_OR_ARRAY", name: addFunctionOrArrayToSymbolTable(name), arguments: args }); }
 
 NumericFunctionOrArray
     = name:NumericNonArrayIdentifier _ args:Arguments
-        { return createNode({ type: "NUMERIC_FUNCTION_OR_ARRAY", name: addFunctionOrArrayNameToSymbolTable(name), arguments: args }); }
+        { return createNode({ type: "NUMERIC_FUNCTION_OR_ARRAY", name: addFunctionOrArrayToSymbolTable(name), arguments: args }); }
 
 Arguments
     = "(" _ args:ArgumentList? _ ")"
@@ -920,7 +928,7 @@ SubroutineHeader
 
             isInsideFunction = name;
 
-            return { name: addFunctionOrArrayNameToSymbolTable(name), parameters: optionalList(extractOptional(parameters, 0)) };
+            return { name: addFunctionOrArrayToSymbolTable(name), parameters: optionalList(extractOptional(parameters, 0)) };
         }
 
 subroutineEnd
@@ -990,11 +998,13 @@ LabelledStatement
 
 NumberedLine
     = label:UnsignedInteger !(WhiteSpace+ UnsignedInteger)
-        { if (!numberedLineAllowed) error(["ParseErrorAt", label]); return label; }
+        { if (!numberedLineAllowed) error(["ParseErrorAt", label]); return addLabelToSymbolTable(label); }
 
 Label
-    = UnsignedInteger
-    / IdentifierName
+    = label:UnsignedInteger
+        { return addLabelToSymbolTable(label); }
+    / label:IdentifierName
+        { return addLabelToSymbolTable(label); }
 
 OpenStatement
     = open:OpenClause
@@ -1116,7 +1126,7 @@ ArrayDimensionsStatement
 
 ArrayDimensionsItem
     = name:NonArrayIdentifier _ dimensions:Arguments
-        { return { name: addFunctionOrArrayNameToSymbolTable(name), dimensions }; }
+        { return { name: addFunctionOrArrayToSymbolTable(name), dimensions }; }
 
 OpenWindowStatement
     = OpenToken _ WindowToken _ width:NumericExpression _ "," _ height:NumericExpression font:(_ "," _ StringExpression)?

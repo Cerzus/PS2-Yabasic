@@ -5,21 +5,21 @@
 /////////////////
 
 Parser.prototype.evaluateGOTO_STATEMENT = function (node) {
-    this.addInstruction(node.line, 'GOTO', node.label);
+    this.addInstruction(node.line, 'GOTO', this.label(node.label));
 };
 
 Parser.prototype.evaluateGOSUB_STATEMENT = function (node) {
-    this.addInstruction(node.line, 'GOSUB', node.label);
+    this.addInstruction(node.line, 'GOSUB', this.label(node.label));
 };
 
 Parser.prototype.evaluateON_GOTO_STATEMENT = function (node) {
     this.evaluateNode(node.on);
-    this.addInstruction(node.line, 'ON_GOTO', node.labels);
+    this.addInstruction(node.line, 'ON_GOTO', this.labels(node.labels));
 };
 
 Parser.prototype.evaluateON_GOSUB_STATEMENT = function (node) {
     this.evaluateNode(node.on);
-    this.addInstruction(node.line, 'ON_GOSUB', node.labels);
+    this.addInstruction(node.line, 'ON_GOSUB', this.labels(node.labels));
 };
 
 Parser.prototype.evaluateEND_STATEMENT = function (node) {
@@ -75,6 +75,7 @@ Parser.prototype.evaluateSUBROUTINE_STATEMENT = function (node) {
             return types[parameter.type];
         }),
         address: this.instructions.length,
+        instructionLabels: [],
     };
 
     this.addInstruction(node.line, 'LOCAL_NUMERIC_VARIABLE', this.numericVariable('numparams'));
@@ -155,10 +156,15 @@ Parser.prototype.evaluateSTATIC_STATEMENT = function (node) {
 
 Parser.prototype.evaluateLABELLED_STATEMENT = function (node) {
     // link the label to the next instruction
-    this.instructionLabels[node.label] = this.instructions.length;
-
     if (node.label.indexOf('/') === -1) {
-        this.dataLabels[node.label] = this.data.length;
+        const labelName = this.symbolTable.labels.indexOf(node.label)
+        this.instructionLabels[labelName] = this.instructions.length;
+        this.dataLabels[labelName] = this.data.length;
+    } else {
+        const foo = node.label.split('/');
+        const subroutineName = foo[0];
+        const labelName = this.symbolTable.labels.indexOf(foo[1]);
+        this.subroutines[subroutineName].instructionLabels[labelName] = this.instructions.length;
     }
 
     if (node.statement !== null) {

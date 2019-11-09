@@ -263,9 +263,9 @@ class Interpreter {
             this.hideMessage();
 
             this.instructions = compiledSource.instructions;
-            this.instructionLabels = compiledSource.instructionLabels;
+            // this.instructionLabels = compiledSource.instructionLabels;
             this.data = compiledSource.data;
-            this.dataLabels = compiledSource.dataLabels;
+            // this.dataLabels = compiledSource.dataLabels;
 
             this.numberOfDataItems = this.data.length;
 
@@ -283,6 +283,8 @@ class Interpreter {
                 },
                 ...compiledSource.subroutines,
             });
+            this.symbolStack.setGlobalInstructionLabels(compiledSource.instructionLabels);
+            this.symbolStack.setGlobalDataLabels(compiledSource.dataLabels);
 
             this.logInstructions();
             console.log('Symbol stack', this.symbolStack);
