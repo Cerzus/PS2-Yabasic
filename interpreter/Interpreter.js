@@ -379,7 +379,16 @@ class Interpreter {
                 for (let i = 0; i < 100 && !this.endFrame && running; i++) {
                     const instruction = this.instructions[this.programCounter++];
 
-                    this[instruction.type](...instruction.arguments);
+                    switch (instruction.type) {
+                        case 'instructionLOAD_NUMERIC_VARIABLE':
+                            this.instructionLOAD_NUMERIC_VARIABLE(instruction.arguments[0]);
+                            break;
+                        case 'instructionSTORE_NUMERIC_VARIABLE':
+                            this.instructionSTORE_NUMERIC_VARIABLE(instruction.arguments[0]);
+                            break;
+                        default:
+                            this[instruction.type](...instruction.arguments);
+                    }
 
                     running = this.programCounter < this.instructions.length && !this.errorsFound;
                 }
