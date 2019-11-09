@@ -86,10 +86,15 @@ Interpreter.prototype.instructionCALL_FUNCTION = function (id, numArguments) {
     this.callStack.push({
         type: 'SUBROUTINE',
         programCounter: this.programCounter,
+        arrayArguments: this.arrayArguments,
+        staticArrays: this.staticArrays,
     });
     this.symbolStack.pushStackFrame(id);
 
     this.programCounter = subroutine.address;
+
+    this.arrayArguments = {};
+    this.staticArrays = [];
 };
 
 Interpreter.prototype.instructionRETURN = function (hasReturnValue) {
@@ -113,10 +118,20 @@ Interpreter.prototype.instructionRETURN = function (hasReturnValue) {
             }
         }
 
+        for (let id of this.staticArrays) {
+            this.symbolStack.arraysScope[id] = 'STATIC';
+            const array = this.symbolStack.getArray(id);
+            this.arrayArguments[id].array.dimensions = array.dimensions;
+            this.arrayArguments[id].array.values = array.values;
+        }
+
         const context = this.callStack.pop();
         this.symbolStack.popStackFrame();
 
         this.programCounter = context.programCounter;
+
+        this.arrayArguments = context.arrayArguments;
+        this.staticArrays = context.staticArrays;
     } else {
         if (this.callStack.length === 0) {
             this.throwError('ReturnWithoutGosub');
@@ -133,11 +148,17 @@ Interpreter.prototype.instructionSTORE_LOCAL_ARRAY_REFERENCE = function (id) {
 
     this.symbolStack.arraysScope[id] = 'LOCAL';
 
-    const value = this.popValue();
+    const array = this.popValue();
 
-    this.symbolStack.getArray(id) = {
-        dimensions: value.dimensions,
-        values: value.values,
+    this.symbolStack.getArrayStore(id)[id] = {
+        dimensions: array.dimensions,
+        values: array.values,
+    };
+
+    this.arrayArguments[id] = {
+        array,
+        dimensions: array.dimensions.slice(),
+        values: array.values.slice(),
     };
 };
 
@@ -152,13 +173,19 @@ Interpreter.prototype.instructionLOCAL_ARRAY = function (id, numDimensions) {
 };
 
 Interpreter.prototype.instructionSTATIC_ARRAY = function (id, numDimensions) {
-    if (this.symbolStack.arraysScope[id] === 'LOCAL') {
-        this.throwError('AlreadyDefinedWithinSub', this.symbolStack.getArrayName(id));
-    }
+    // if (this.symbolStack.arraysScope[id] === 'LOCAL') {
+    //     this.throwError('AlreadyDefinedWithinSub', this.symbolStack.getArrayName(id));
+    // }
 
     this.symbolStack.arraysScope[id] = 'STATIC';
-
     this.instructionDIM(id, numDimensions);
+
+    if (id in this.arrayArguments) {
+        if (this.staticArrays.indexOf(id) < 0) {
+            this.staticArrays.push(id);
+        }
+        this.symbolStack.arraysScope[id] = 'LOCAL';
+    }
 };
 
 Interpreter.prototype.instructionGOTO = function (labelId) {

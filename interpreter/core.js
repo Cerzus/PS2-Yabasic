@@ -344,6 +344,7 @@ Interpreter.prototype.instructionRESTORE = function (labelId) {
         }
 
         this.dataIndex = dataIndex;
-        this.numberOfDataItems = this.data.length;
     }
+
+    this.numberOfDataItems = this.data.length;
 };
