@@ -123,12 +123,28 @@ class SymbolStack {
         }
     }
 
-    getArray(id) {
-        return this.getArrayStore(id)[id];
+    getStringVariableName(id) {
+        return this.symbolTable.numericVariables[id];
+    }
+
+    getNumericVariableName(id) {
+        return this.symbolTable.numericVariables[id];
     }
 
     getArrayName(id) {
         return this.symbolTable.subroutinesAndArrays[id];
+    }
+
+    getSubroutineName(id) {
+        return this.symbolTable.subroutinesAndArrays[id];
+    }
+
+    getLabelName(id) {
+        return this.symbolTable.labels[id];
+    }
+
+    getArray(id) {
+        return this.getArrayStore(id)[id];
     }
 
     getArrayType(id) {
@@ -139,19 +155,11 @@ class SymbolStack {
         return this.globalSubroutinesAndArrays[id];
     }
 
-    getSubroutineName(id) {
-        return this.symbolTable.subroutinesAndArrays[id];
-    }
-
     getSubroutineType(id) {
         return this.symbolTable.subroutinesAndArrays[id].endsWith('$') ? 'String' : 'Number';
     }
 
     getCurrentSubroutineType() {
         return this.getSubroutineType(this.globalSubroutinesAndArrays.indexOf(this.stackFrame.subroutine));
-    }
-
-    getLabelName(id) {
-        return this.symbolTable.labels[id];
     }
 }

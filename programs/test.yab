@@ -1,4 +1,7 @@
-sub g(g())
-?g()
+sub h()
+static k(9)
+#dim kpoii(9)
 end sub
-g()
+h()
+poke "dump","symbols"
+dot 9,9

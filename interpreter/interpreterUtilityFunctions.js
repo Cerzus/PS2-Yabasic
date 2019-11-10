@@ -8,6 +8,14 @@ Interpreter.prototype.queueMessage = function (type, stringName, ...parameters) 
     });
 };
 
+Interpreter.prototype.queueDump = function (message) {
+    this.errorQueue.push({
+        type: 'Dump',
+        line: this.instructions[this.programCounter - 1].line,
+        message,
+    });
+};
+
 Interpreter.prototype.queueWarning = function (stringName, ...parameters) {
     this.queueMessage('Warning', stringName, ...parameters);
 };

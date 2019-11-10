@@ -35,7 +35,7 @@ Interpreter.prototype.gotoOrGosub = function (labelId, gosub) {
 
 Interpreter.prototype.instructionCALL_FUNCTION_OR_ARRAY = function (id, numArguments) {
     const subroutineOrArray = this.symbolStack.getSubroutine(id);
-    if (subroutineOrArray !== undefined && subroutineOrArray.address) {
+    if (subroutineOrArray !== undefined && subroutineOrArray.address !== undefined) {
         this.instructionCALL_FUNCTION(id, numArguments);
     } else {
         this.loadArray(id, numArguments);
@@ -241,7 +241,7 @@ Interpreter.prototype.instructionSTORE_LOCAL_NUMERIC_VARIABLE = function (id) {
 
 Interpreter.prototype.instructionLOCAL_STRING_VARIABLE = function (id) {
     if (this.symbolStack.stringVariablesScope[id]) {
-        this.throwError('AlreadyDefinedWithinSub', this.symbolStack.symbolTable.stringVariables[id]);
+        this.throwError('AlreadyDefinedWithinSub', this.symbolStack.getStringVariableName(id));
     }
 
     this.symbolStack.stringVariablesScope[id] = 'LOCAL';
@@ -249,7 +249,7 @@ Interpreter.prototype.instructionLOCAL_STRING_VARIABLE = function (id) {
 
 Interpreter.prototype.instructionLOCAL_NUMERIC_VARIABLE = function (id) {
     if (this.symbolStack.numericVariablesScope[id]) {
-        this.throwError('AlreadyDefinedWithinSub', this.symbolStack.symbolTable.numericVariables[id]);
+        this.throwError('AlreadyDefinedWithinSub', this.symbolStack.getNumericVariableName(id));
     }
 
     this.symbolStack.numericVariablesScope[id] = 'LOCAL';

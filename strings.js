@@ -248,6 +248,8 @@ Strings.prototype.strings = {
         `a reference to a `,
     WarningIn:
         `Warning in %s,%d: `,  // trailing space important
+    DumpIn:
+        `Dump in %s,%d: `,  // trailing space important
     NeedStringAsFunctionName:
         `need a string as a function name`,
     ExpectingNameOfFunctionNot:

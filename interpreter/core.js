@@ -1,5 +1,76 @@
 'use strict';
 
+///////////////////////
+// UTILITY FUNCTIONS //
+///////////////////////
+
+Interpreter.prototype.createNumberSymbolsList = function (identificationList, suffix) {
+    return this.createSymbolsList('NUMBER', 'numericVariables', identificationList, 'getNumericVariableName', suffix);
+};
+
+Interpreter.prototype.createStringSymbolsList = function (identificationList, suffix) {
+    return this.createSymbolsList('STRING', 'stringVariables', identificationList, 'getStringVariableName', suffix);
+};
+
+Interpreter.prototype.createArraySymbolsList = function (identificationList, suffix) {
+    return this.createSymbolsList('ARRAY', 'subroutinesAndArrays', identificationList, 'getArrayName', suffix);
+};
+
+Interpreter.prototype.createSymbolsList = function (type, symbolTableList, identificationList, getNameFunction, suffix) {
+    let message = '';
+    for (let id in this.symbolStack.symbolTable[symbolTableList]) {
+        if (identificationList[id] !== undefined) {
+            message += this.createSymbolIdentifier(' ' + type + ':', this.symbolStack[getNameFunction](id)) + (suffix || '');
+        }
+    }
+    return message;
+};
+
+Interpreter.prototype.createSymbolIdentifier = function (prefix, name) {
+    return prefix + this.library + '.' + name;
+};
+
+Interpreter.prototype.dumpSymbolStack = function() {
+    this.queueDump('head of symbol stack');
+
+    // dump the current subroutine's symbols and all it's parent's ones except the root (global stackframe)
+    for (let i = this.symbolStack.stackFrames.length - 1; i > 0; i--) {
+        const stackFrame = this.symbolStack.stackFrames[i];
+        this.queueDump(
+            this.createNumberSymbolsList(stackFrame.numericVariablesScope) +
+            this.createStringSymbolsList(stackFrame.stringVariablesScope) +
+            this.createArraySymbolsList(stackFrame.arraysScope)
+        );
+    }
+
+    // start a list with all numeric and string symbols in the global scope
+    let message =
+        this.createNumberSymbolsList(this.symbolStack.globalNumericVariables) +
+        ' STRING:yabos$' +
+        this.createStringSymbolsList(this.symbolStack.globalStringVariables);
+
+    // add global arrays and static symbols to the list
+    for (let id in this.symbolStack.globalSubroutinesAndArrays) {
+        const subroutineOrArray = this.symbolStack.globalSubroutinesAndArrays[id];
+        if (subroutineOrArray !== undefined) {
+            if (subroutineOrArray.dimensions !== undefined) {
+                message += this.createSymbolIdentifier(' ARRAY:', this.symbolStack.getArrayName(id));
+            } else {
+                const suffix = this.createSymbolIdentifier('@', this.symbolStack.getSubroutineName(id));
+                message +=
+                    this.createNumberSymbolsList(subroutineOrArray.numericVariables, suffix) +
+                    this.createStringSymbolsList(subroutineOrArray.stringVariables, suffix) +
+                    this.createArraySymbolsList(subroutineOrArray.arrays, suffix);
+            }
+        }
+    }
+
+    // dump the global symbol list
+    this.queueDump(message);
+
+    this.queueDump('root of symbol stack');
+};
+
 //////////////////
 // INSTRUCTIONS //
 //////////////////
@@ -159,7 +230,7 @@ Interpreter.prototype.instructionPOKE = function () {
     switch (this.popStringOrNumberWithType().value.toLowerCase()) {
         case 'dump':
             if (value.value === 'symbols') {
-                // TODO
+                this.dumpSymbolStack();
                 return;
             }
         case 'read_controls':

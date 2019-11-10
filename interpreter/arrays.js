@@ -66,7 +66,7 @@ Interpreter.prototype.getArrayDimensions = function (numDimensions) {
 Interpreter.prototype.instructionSTORE_ARRAY_ELEMENT = function (id, numArguments) {
     const array = this.symbolStack.getArray(id);
 
-    if (array === undefined || array.address) {
+    if (array === undefined || array.address !== undefined) {
         this.throwError('IsNeitherArrayNorSubroutine', this.symbolStack.getArrayName(id));
     }
 
@@ -79,7 +79,7 @@ Interpreter.prototype.instructionSTORE_ARRAY_ELEMENT = function (id, numArgument
 Interpreter.prototype.loadArray = function (id, numArguments) {
     const array = this.symbolStack.getArray(id);
 
-    if (array === undefined || array.address) {
+    if (array === undefined || array.address !== undefined) {
         this.throwError('IsNeitherArrayNorSubroutine', this.symbolStack.getArrayName(id));
     }
 
@@ -99,7 +99,7 @@ Interpreter.prototype.loadArray = function (id, numArguments) {
 Interpreter.prototype.instructionLOAD_ARRAY_REFERENCE = function (id) {
     const array = this.symbolStack.getArray(id);
 
-    if (array === undefined || array.address) {
+    if (array === undefined || array.address !== undefined) {
         this.throwError('ArrayNotDefined', this.symbolStack.getArrayName(id));
     }
 
@@ -114,7 +114,7 @@ Interpreter.prototype.instructionDIM = function (id, numDimensions) {
     const store = this.symbolStack.getArrayStore(id);
     const array = store[id];
 
-    if (array !== undefined && array.address) {
+    if (array !== undefined && array.address !== undefined) {
         this.throwError('ArrayConflictsWithUserSubroutine', this.symbolStack.getArrayName(id));
     }
 

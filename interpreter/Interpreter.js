@@ -8,9 +8,9 @@ class Interpreter {
     ////////////
 
     constructor() {
-        this.version = 2.64;
+        this.version = 2.66;
         this.fps = 50;
-        this.cpuUsage = 1;
+        this.cpuUsage = 0.2;
         this.maxInstructionsPerFrame = 140000000;
         this.resolution = {
             width: 640,
@@ -395,11 +395,11 @@ class Interpreter {
             return;
         }
 
-        this.textScreen.update();
-        this.graphicsScreen.update();
         if (this.hideTextScreen) {
+            this.graphicsScreen.update();
             this.textScreen.hide();
         } else {
+            this.textScreen.update();
             this.textScreen.show();
         }
 
@@ -430,6 +430,9 @@ class Interpreter {
             clearTimeout(this.runTimeoutId);
             this.runTimeoutId = null;
 
+            this.textScreen.update();
+            this.graphicsScreen.update();
+
             if (this.valuesStackLength > 0) {
                 console.error('values left in stack!', this.valuesStack.slice(0, this.valuesStackLength));
             }
@@ -450,10 +453,10 @@ class Interpreter {
         for (let i = 0; i < this.errorQueue.length && message.length <= 252; i++) {
             const error = this.errorQueue[i];
             const line = error.line;
-            if (line === previousLine) {
-                message += '---' + this.strings.get(error.type) + ': ' + error.message + '\n';
-            } else {
+            if (line !== previousLine || error.type === 'Dump') {
                 message += '---' + this.strings.get(error.type + 'In', this.programName, line) + error.message + '\n';
+            } else if (line === previousLine) {
+                message += '---' + this.strings.get(error.type) + ': ' + error.message + '\n';
             }
             previousLine = line;
         }
