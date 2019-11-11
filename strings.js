@@ -248,6 +248,8 @@ Strings.prototype.strings = {
         `a reference to a `,
     WarningIn:
         `Warning in %s,%d: `,  // trailing space important
+    DumpIn:
+        `Dump in %s,%d: `,  // trailing space important
     NeedStringAsFunctionName:
         `need a string as a function name`,
     ExpectingNameOfFunctionNot:
@@ -256,6 +258,14 @@ Strings.prototype.strings = {
         `numeric`,
     SubroutineNotDefined:
         `subroutine '%s' not defined`,
+    FatalError:
+        `Fatal error`,
+    ArrayParamsSameNameNotImplemented:
+        `multiple array parameters of the same name are not implemented`,
+    LocalArraysToStaticNotImplemented:
+        `converting local arrays to static is not implemented`,
+    ArrayDimSizeSubroutinesNotImplemented:
+        `'arraydim()' and 'arraysize()' inside subroutines not implemented in version %d`,
     '':
         '',
 };

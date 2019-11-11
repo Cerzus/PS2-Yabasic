@@ -1,12 +1,7 @@
-for b=0 to 20000
-a=a:a=a:a=a:a=a:a=a:a=a:a=a:a=a:a=a:a=a:
-a=a:a=a:a=a:a=a:a=a:a=a:a=a:a=a:a=a:a=a:
-a=a:a=a:a=a:a=a:a=a:a=a:a=a:a=a:a=a:a=a:
-a=a:a=a:a=a:a=a:a=a:a=a:a=a:a=a:a=a:a=a:
-a=a:a=a:a=a:a=a:a=a:a=a:a=a:a=a:a=a:a=a:
-a=a:a=a:a=a:a=a:a=a:a=a:a=a:a=a:a=a:a=a:
-a=a:a=a:a=a:a=a:a=a:a=a:a=a:a=a:a=a:a=a:
-a=a:a=a:a=a:a=a:a=a:a=a:a=a:a=a:a=a:a=a:
-a=a:a=a:a=a:a=a:a=a:a=a:a=a:a=a:a=a:a=a:
-a=a:a=a:a=a:a=a:a=a:a=a:a=a:a=a:a=a:a=a:
-next
+sub h()
+static k(9)
+#dim kpoii(9)
+end sub
+h()
+poke "dump","symbols"
+dot 9,9

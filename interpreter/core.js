@@ -1,12 +1,82 @@
 'use strict';
 
+///////////////////////
+// UTILITY FUNCTIONS //
+///////////////////////
+
+Interpreter.prototype.createNumberSymbolsList = function (identificationList, suffix) {
+    return this.createSymbolsList('NUMBER', 'numericVariables', identificationList, 'getNumericVariableName', suffix);
+};
+
+Interpreter.prototype.createStringSymbolsList = function (identificationList, suffix) {
+    return this.createSymbolsList('STRING', 'stringVariables', identificationList, 'getStringVariableName', suffix);
+};
+
+Interpreter.prototype.createArraySymbolsList = function (identificationList, suffix) {
+    return this.createSymbolsList('ARRAY', 'subroutinesAndArrays', identificationList, 'getArrayName', suffix);
+};
+
+Interpreter.prototype.createSymbolsList = function (type, symbolTableList, identificationList, getNameFunction, suffix) {
+    let message = '';
+    for (let id in this.symbolStack.symbolTable[symbolTableList]) {
+        if (identificationList[id] !== undefined) {
+            message += this.createSymbolIdentifier(' ' + type + ':', this.symbolStack[getNameFunction](id)) + (suffix || '');
+        }
+    }
+    return message;
+};
+
+Interpreter.prototype.createSymbolIdentifier = function (prefix, name) {
+    return prefix + this.library + '.' + name;
+};
+
+Interpreter.prototype.dumpSymbolStack = function() {
+    this.queueDump('head of symbol stack');
+
+    // dump the current subroutine's symbols and all it's parent's ones except the root (global stackframe)
+    for (let i = this.symbolStack.stackFrames.length - 1; i > 0; i--) {
+        const stackFrame = this.symbolStack.stackFrames[i];
+        this.queueDump(
+            this.createNumberSymbolsList(stackFrame.numericVariablesScope) +
+            this.createStringSymbolsList(stackFrame.stringVariablesScope) +
+            this.createArraySymbolsList(stackFrame.arraysScope)
+        );
+    }
+
+    // start a list with all numeric and string symbols in the global scope
+    let message =
+        this.createNumberSymbolsList(this.symbolStack.globalNumericVariables) +
+        ' STRING:yabos$' +
+        this.createStringSymbolsList(this.symbolStack.globalStringVariables);
+
+    // add global arrays and static symbols to the list
+    for (let id in this.symbolStack.globalSubroutinesAndArrays) {
+        const subroutineOrArray = this.symbolStack.globalSubroutinesAndArrays[id];
+        if (subroutineOrArray !== undefined) {
+            if (subroutineOrArray.dimensions !== undefined) {
+                message += this.createSymbolIdentifier(' ARRAY:', this.symbolStack.getArrayName(id));
+            } else {
+                const suffix = this.createSymbolIdentifier('@', this.symbolStack.getSubroutineName(id));
+                message +=
+                    this.createNumberSymbolsList(subroutineOrArray.numericVariables, suffix) +
+                    this.createStringSymbolsList(subroutineOrArray.stringVariables, suffix) +
+                    this.createArraySymbolsList(subroutineOrArray.arrays, suffix);
+            }
+        }
+    }
+
+    // dump the global symbol list
+    this.queueDump(message);
+
+    this.queueDump('root of symbol stack');
+};
+
 //////////////////
 // INSTRUCTIONS //
 //////////////////
 
 Interpreter.prototype.instructionPOP = function () {
     this.valuesStackPop();
-    // this.valuesStack.pop();
 };
 
 Interpreter.prototype.instructionJUMP = function (destination) {
@@ -27,32 +97,38 @@ Interpreter.prototype.instructionSTRING = function (value) {
     this.pushString(value);
 };
 
-Interpreter.prototype.instructionSTORE_STRING_VARIABLE = function (variableName) {
-    this.variables[this.scopeVariableName(variableName)] = this.popString();
+Interpreter.prototype.instructionSTORE_STRING_VARIABLE = function (id) {
+    this.symbolStack.getStringVariableStore(id)[id] = this.popString();
 };
 
-Interpreter.prototype.instructionSTORE_NUMERIC_VARIABLE = function (variableName) {
-    this.variables[this.scopeVariableName(variableName)] = this.popNumber();
+Interpreter.prototype.instructionSTORE_NUMERIC_VARIABLE = function (id) {
+    this.symbolStack.getNumericVariableStore(id)[id] = this.popNumber();
 };
 
-Interpreter.prototype.instructionLOAD_STRING_VARIABLE = function (variableName) {
-    variableName = this.scopeVariableName(variableName);
+Interpreter.prototype.instructionLOAD_STRING_VARIABLE = function (id) {
+    const store = this.symbolStack.getStringVariableStore(id);
+    let string = store[id];
 
-    if (!(variableName in this.variables)) {
-        this.variables[variableName] = '';
+    if (string === undefined) {
+        string = '';
+
+        store[id] = string;
     }
 
-    this.pushString(this.variables[variableName]);
+    this.pushString(string);
 };
 
-Interpreter.prototype.instructionLOAD_NUMERIC_VARIABLE = function (variableName) {
-    variableName = this.scopeVariableName(variableName);
+Interpreter.prototype.instructionLOAD_NUMERIC_VARIABLE = function (id) {
+    const store = this.symbolStack.getNumericVariableStore(id);
+    let number = store[id];
 
-    if (!(variableName in this.variables)) {
-        this.variables[variableName] = 0;
+    if (number === undefined) {
+        number = 0;
+
+        store[id] = number;
     }
 
-    this.pushNumber(this.variables[variableName]);
+    this.pushNumber(number);
 };
 
 Interpreter.prototype.instructionCOMPILE = function () {
@@ -73,14 +149,17 @@ Interpreter.prototype.instructionCOMPILE = function () {
         if (this.runtimeCompiledSource === null) {
             this.programCounter--;
         } else {
-            // TODO: check whether completely replacing everything should or could be done more efficiently
-            this.subroutines = this.runtimeCompiledSource.subroutines;
             this.instructions = this.runtimeCompiledSource.instructions;
-            this.instructionLabels = this.runtimeCompiledSource.instructionLabels;
             this.data = this.runtimeCompiledSource.data;
-            this.dataLabels = this.runtimeCompiledSource.dataLabels;
 
-            console.log(this.instructions);
+            this.symbolStack.symbolTable = this.runtimeCompiledSource.symbolTable;
+            this.symbolStack.setGlobalSubroutinesAndArrays({
+                ...this.runtimeCompiledSource.subroutines,
+            });
+            this.symbolStack.setGlobalInstructionLabels(this.runtimeCompiledSource.instructionLabels);
+            this.symbolStack.setGlobalDataLabels(this.runtimeCompiledSource.dataLabels);
+
+            // this.logInstructions();
 
             this.isWaitingForRuntimeCompilation = false;
             this.runtimeCompiledSource = null;
@@ -148,40 +227,40 @@ Interpreter.prototype.instructionERROR = function () {
 Interpreter.prototype.instructionPOKE = function () {
     const value = this.popStringOrNumberWithType();
 
-    switch (this.popStringOrNumberWithType()[0].toLowerCase()) {
+    switch (this.popStringOrNumberWithType().value.toLowerCase()) {
         case 'dump':
-            if (value[0] === 'symbols') {
-                // TODO
+            if (value.value === 'symbols') {
+                this.dumpSymbolStack();
                 return;
             }
         case 'read_controls':
-            if (value[1] === 'Number') {
-                this.readControls = !!value[0];
+            if (value.type === 'Number') {
+                this.readControls = !!value.value;
                 return;
             }
         case 'fontheight':
-            if (value[1] === 'Number') {
+            if (value.type === 'Number') {
                 // numberToInt? 2.64: TODO, 2.66: yes 
-                this.fontHeight = this.numberToInt(value[0]);
+                this.fontHeight = this.numberToInt(value.value);
                 return;
             }
         case 'textalign':
-            if (value[1] === 'String') {
-                this.textAlign = this.getTextAlignment(value[0]);
+            if (value.type === 'String') {
+                this.textAlign = this.getTextAlignment(value.value);
                 return;
             }
         case 'windoworigin':
-            if (value[1] === 'String') {
-                this.setWindowOrigin(value[0]);
+            if (value.type === 'String') {
+                this.setWindowOrigin(value.value);
                 return;
             }
         case 'font':
-            if (value[1] === 'String') {
-                this.font = value[0];
+            if (value.type === 'String') {
+                this.font = value.value;
                 return;
             }
         case 'stdout':
-            if (value[1] === 'String') {
+            if (value.type === 'String') {
                 return;
             }
     }
@@ -208,7 +287,7 @@ Interpreter.prototype.instructionPEEK$_1 = function () {
             this.pushString(this.windowOrigin);
             return;
         case 'error':
-            this.pushString(this.strings.get(...this.streamError[1]));
+            this.pushString(this.strings.get(...this.streamError.message));
             return;
         case 'font':
             this.pushString(this.font);
@@ -258,7 +337,7 @@ Interpreter.prototype.instructionPEEK = function () {
             this.pushNumber(this.screenHeight);
             return;
         case 'error':
-            this.pushNumber(this.streamError[0]);
+            this.pushNumber(this.streamError.id);
             return;
         case 'argument':
             this.pushNumber(0);
@@ -274,8 +353,8 @@ Interpreter.prototype.instructionWAIT = function () {
         this.waitStartTime = now;
     }
 
-    // if (now >= this.waitStartTime + 1000 * this.valuesStack[this.valuesStack.length - 1][0]) {
-    if (now >= this.waitStartTime + 1000 * this.valuesStackPeek()[0]) {
+    // TODO: type checking?
+    if (now >= this.waitStartTime + 1000 * this.valuesStackPeek().value) {
         this.waitStartTime = null;
         this.popNumber();
     } else {
@@ -309,14 +388,6 @@ Interpreter.prototype.instructionBELL = function () {
     // }
 };
 
-Interpreter.prototype.instructionCALL_FUNCTION_OR_ARRAY = function (name, numArguments, isUsedAsArgument) {
-    if (name in this.subroutines) {
-        this.instructionCALL_FUNCTION(name, numArguments);
-    } else {
-        this.instructionCALL_ARRAY(name, numArguments, isUsedAsArgument);
-    }
-};
-
 Interpreter.prototype.instructionREAD = function (variableType) {
     if (this.dataIndex >= this.numberOfDataItems) {
         this.throwError('RunOutOfDataItems');
@@ -324,25 +395,27 @@ Interpreter.prototype.instructionREAD = function (variableType) {
 
     const data = this.data[this.dataIndex];
 
-    if (data[1] !== variableType) {
+    if (data.type !== variableType) {
         this.throwError('TypeOfReadAndDataDontMatch');
     }
 
-    // this.valuesStack.push(data);
     this.valuesStackPush(data);
 
     this.dataIndex++;
 };
 
-Interpreter.prototype.instructionRESTORE = function (label) {
-    if (label === null) {
+Interpreter.prototype.instructionRESTORE = function (labelId) {
+    if (labelId === null) {
         this.dataIndex = 0;
     } else {
-        if (!(label in this.dataLabels)) {
-            this.throwError('CantFindLabel', this.library + '.' + label);
+        const dataIndex = this.symbolStack.dataLabels[labelId];
+
+        if (dataIndex === undefined) {
+            this.throwError('CantFindLabel', this.library + '.' + this.symbolStack.getLabelName(labelId));
         }
 
-        this.dataIndex = this.dataLabels[label];
-        this.numberOfDataItems = this.data.length;
+        this.dataIndex = dataIndex;
     }
+
+    this.numberOfDataItems = this.data.length;
 };

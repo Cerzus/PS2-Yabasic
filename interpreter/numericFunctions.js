@@ -306,12 +306,20 @@ Interpreter.prototype.instructionSPLIT = function (hasSeparator, removeEmptyStri
 
 // TODO: add bug
 Interpreter.prototype.instructionARDIM = function () {
+    if (this.version < 2.65 && this.symbolStack.stackFrame.subroutine !== undefined) {
+        this.throwError('ArrayDimSizeSubroutinesNotImplemented', this.version);
+    }
+
     // numberToInt? 2.64: TODO, 2.66: TODO 
     this.pushNumber(this.popValue().dimensions.length);
 };
 
 // TODO: add bug
 Interpreter.prototype.instructionARSIZE = function () {
+    if (this.version < 2.65 && this.symbolStack.stackFrame.subroutine !== undefined) {
+        this.throwError('ArrayDimSizeSubroutinesNotImplemented', this.version);
+    }
+
     // numberToInt? 2.64: TODO, 2.66: TODO 
     const right = this.numberToInt(this.popNumber());
     const dimensions = this.popValue().dimensions;

@@ -5,21 +5,21 @@
 /////////////////
 
 Parser.prototype.evaluateGOTO_STATEMENT = function (node) {
-    this.addInstruction(node.line, 'GOTO', node.label);
+    this.addInstruction(node.line, 'GOTO', this.label(node.label));
 };
 
 Parser.prototype.evaluateGOSUB_STATEMENT = function (node) {
-    this.addInstruction(node.line, 'GOSUB', node.label);
+    this.addInstruction(node.line, 'GOSUB', this.label(node.label));
 };
 
 Parser.prototype.evaluateON_GOTO_STATEMENT = function (node) {
     this.evaluateNode(node.on);
-    this.addInstruction(node.line, 'ON_GOTO', node.labels);
+    this.addInstruction(node.line, 'ON_GOTO', this.labels(node.labels));
 };
 
 Parser.prototype.evaluateON_GOSUB_STATEMENT = function (node) {
     this.evaluateNode(node.on);
-    this.addInstruction(node.line, 'ON_GOSUB', node.labels);
+    this.addInstruction(node.line, 'ON_GOSUB', this.labels(node.labels));
 };
 
 Parser.prototype.evaluateEND_STATEMENT = function (node) {
@@ -54,48 +54,44 @@ Parser.prototype.evaluateEXECUTE_STATEMENT = function (node) {
 
 Parser.prototype.evaluateFUNCTION_OR_ARRAY_STATEMENT = function (node) {
     this.evaluateArgumentNodes(node.arguments);
-    this.addInstruction(node.line, 'CALL_FUNCTION', node.name, node.arguments.length);
+    this.addInstruction(node.line, 'CALL_FUNCTION', this.subroutineOrArray(node.name), node.arguments.length);
     this.addInstruction(node.line, 'POP');
 };
 
 Parser.prototype.evaluateSUBROUTINE_STATEMENT = function (node) {
+    const types = {
+        'STRING_VARIABLE': 'String',
+        'NUMERIC_VARIABLE': 'Number',
+        'NUMPARAMS': 'Number',
+        'STRING_ARRAY': 'StringArray',
+        'NUMERIC_ARRAY': 'NumericArray',
+    };
+
     // add a jump instruction to skip across the subroutine when executing code outside of it
     const skipSubroutineJumpIndex = this.addInstructionPlaceholder();
 
     // add the subroutine to the list of subroutines in this program
     this.subroutines[node.name] = {
-        parameters: node.parameters.map(parameter => {
-            const types = {
-                'STRING_VARIABLE': 'String',
-                'NUMERIC_VARIABLE': 'Number',
-                'NUMPARAMS': 'Number',
-                'STRING_ARRAY': 'StringArray',
-                'NUMERIC_ARRAY': 'NumericArray',
-            };
-            return types[parameter.type];
-        }),
+        parameters: node.parameters.map(parameter => types[parameter.type]),
         address: this.instructions.length,
+        instructionLabels: [],
     };
 
-    this.addInstruction(node.line, 'LOCAL_VARIABLE', 'numparams');
-    this.addInstruction(node.line, 'STORE_NUMERIC_VARIABLE', 'numparams');
+    this.addInstruction(node.line, 'STORE_LOCAL_NUMERIC_VARIABLE', this.numericVariable('numparams'));
 
     for (let i = node.parameters.length - 1; i >= 0; i--) {
         const parameter = node.parameters[i];
         switch (parameter.type) {
             case 'STRING_VARIABLE':
-                this.addInstruction(parameter.line, 'LOCAL_VARIABLE', parameter.name);
-                this.addInstruction(parameter.line, 'STORE_STRING_VARIABLE', parameter.name);
+                this.addInstruction(parameter.line, 'STORE_LOCAL_STRING_VARIABLE', this.stringVariable(parameter.name));
                 break;
             case 'NUMERIC_VARIABLE':
             case 'NUMPARAMS':
-                this.addInstruction(parameter.line, 'LOCAL_VARIABLE', parameter.name);
-                this.addInstruction(parameter.line, 'STORE_NUMERIC_VARIABLE', parameter.name);
+                this.addInstruction(parameter.line, 'STORE_LOCAL_NUMERIC_VARIABLE', this.numericVariable(parameter.name));
                 break;
             case 'STRING_ARRAY':
             case 'NUMERIC_ARRAY':
-                this.addInstruction(parameter.line, 'LOCAL_ARRAY_REFERENCE', parameter.name);
-                this.addInstruction(parameter.line, 'STORE_ARRAY_REFERENCE', parameter.name);
+                this.addInstruction(parameter.line, 'STORE_LOCAL_ARRAY_REFERENCE', this.subroutineOrArray(parameter.name));
                 break;
         }
     }
@@ -117,34 +113,38 @@ Parser.prototype.evaluateRETURN_STATEMENT = function (node) {
 };
 
 Parser.prototype.evaluateLOCAL_STATEMENT = function (node) {
-    for (let variable of node.variables) {
-        switch (variable.type) {
+    for (let item of node.items) {
+        switch (item.type) {
             case 'STRING_VARIABLE':
+                this.addInstruction(item.line, 'LOCAL_STRING_VARIABLE', this.stringVariable(item.name));
+                break;
             case 'NUMERIC_VARIABLE':
             case 'NUMPARAMS':
-                this.addInstruction(variable.line, 'LOCAL_VARIABLE', variable.name);
+                this.addInstruction(item.line, 'LOCAL_NUMERIC_VARIABLE', this.numericVariable(item.name));
                 break;
             case 'STRING_FUNCTION_OR_ARRAY':
             case 'NUMERIC_FUNCTION_OR_ARRAY':
-                this.evaluateArgumentNodes(variable.arguments);
-                this.addInstruction(variable.line, 'LOCAL_ARRAY', variable.name, variable.arguments.length);
+                this.evaluateArgumentNodes(item.arguments);
+                this.addInstruction(item.line, 'LOCAL_ARRAY', this.subroutineOrArray(item.name), item.arguments.length);
                 break;
         }
     }
 };
 
 Parser.prototype.evaluateSTATIC_STATEMENT = function (node) {
-    for (let variable of node.variables) {
-        switch (variable.type) {
+    for (let item of node.items) {
+        switch (item.type) {
             case 'STRING_VARIABLE':
+                this.addInstruction(item.line, 'STATIC_STRING_VARIABLE', this.stringVariable(item.name));
+                break;
             case 'NUMERIC_VARIABLE':
             case 'NUMPARAMS':
-                this.addInstruction(variable.line, 'STATIC_VARIABLE', variable.name);
+                this.addInstruction(item.line, 'STATIC_NUMERIC_VARIABLE', this.numericVariable(item.name));
                 break;
             case 'STRING_FUNCTION_OR_ARRAY':
             case 'NUMERIC_FUNCTION_OR_ARRAY':
-                this.evaluateArgumentNodes(variable.arguments);
-                this.addInstruction(variable.line, 'STATIC_ARRAY', variable.name, variable.arguments.length);
+                this.evaluateArgumentNodes(item.arguments);
+                this.addInstruction(item.line, 'STATIC_ARRAY', this.subroutineOrArray(item.name), item.arguments.length);
                 break;
         }
     }
@@ -152,10 +152,15 @@ Parser.prototype.evaluateSTATIC_STATEMENT = function (node) {
 
 Parser.prototype.evaluateLABELLED_STATEMENT = function (node) {
     // link the label to the next instruction
-    this.instructionLabels[node.label] = this.instructions.length;
-
     if (node.label.indexOf('/') === -1) {
-        this.dataLabels[node.label] = this.data.length;
+        const labelName = this.symbolTable.labels.indexOf(node.label)
+        this.instructionLabels[labelName] = this.instructions.length;
+        this.dataLabels[labelName] = this.data.length;
+    } else {
+        const foo = node.label.split('/');
+        const subroutineName = foo[0];
+        const labelName = this.symbolTable.labels.indexOf(foo[1]);
+        this.subroutines[subroutineName].instructionLabels[labelName] = this.instructions.length;
     }
 
     if (node.statement !== null) {
@@ -230,7 +235,7 @@ Parser.prototype.evaluateFOR_STATEMENT = function (node) {
         this.addInstruction(node.line, 'NUMBER', 1);
     }
 
-    this.addInstruction(node.line, 'FOR_CONDITIONAL_CONTINUE', node.variable.name, continueLoopDestinationIndex);
+    this.addInstruction(node.line, 'FOR_CONDITIONAL_CONTINUE', this.numericVariable(node.variable.name), continueLoopDestinationIndex);
 
-    this.insertInstruction(exitLoopInstructionIndex, node.line, 'FOR_CONDITIONAL_EXIT', node.variable.name, this.instructions.length);
+    this.insertInstruction(exitLoopInstructionIndex, node.line, 'FOR_CONDITIONAL_EXIT', this.numericVariable(node.variable.name), this.instructions.length);
 };

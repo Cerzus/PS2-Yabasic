@@ -97,21 +97,22 @@ Parser.prototype.evaluateLOGICAL_EXPRESSION = function (node) {
 };
 
 Parser.prototype.evaluateNUMPARAMS = function (node) {
-    this.addInstruction(node.line, 'LOAD_NUMERIC_VARIABLE', node.name);
-};
-
-Parser.prototype.evaluateNUMERIC_VARIABLE = function (node) {
-    this.addInstruction(node.line, 'LOAD_NUMERIC_VARIABLE', node.name);
+    this.addInstruction(node.line, 'LOAD_NUMERIC_VARIABLE', this.numericVariable(node.name));
 };
 
 Parser.prototype.evaluateSTRING_VARIABLE = function (node) {
-    this.addInstruction(node.line, 'LOAD_STRING_VARIABLE', node.name);
+    this.addInstruction(node.line, 'LOAD_STRING_VARIABLE', this.stringVariable(node.name));
 };
 
-Parser.prototype.evaluateNUMERIC_ARRAY = function (node) {
-    this.addInstruction(node.line, 'LOAD_ARRAY_REFERENCE', node.name, 'NumericArray');
+Parser.prototype.evaluateNUMERIC_VARIABLE = function (node) {
+    this.addInstruction(node.line, 'LOAD_NUMERIC_VARIABLE', this.numericVariable(node.name));
 };
 
 Parser.prototype.evaluateSTRING_ARRAY = function (node) {
-    this.addInstruction(node.line, 'LOAD_ARRAY_REFERENCE', node.name, 'StringArray');
+    this.addInstruction(node.line, 'LOAD_ARRAY_REFERENCE', this.subroutineOrArray(node.name));
 };
+
+Parser.prototype.evaluateNUMERIC_ARRAY = function (node) {
+    this.addInstruction(node.line, 'LOAD_ARRAY_REFERENCE', this.subroutineOrArray(node.name));
+};
+

@@ -17,16 +17,28 @@ class Parser {
         if (!compilingAtRuntime) {
             this.subroutines = {};
             this.instructions = [];
-            this.instructionLabels = {};
+            this.instructionLabels = [];
             this.data = [];
-            this.dataLabels = {};
+            this.dataLabels = [];
             this.documentation = [''];
+
+            this.internalLabels = [];
+            this.subroutineNames = [];
+
+            this.symbolTable = {
+                stringVariables: [],
+                numericVariables: ['numparams', 'PI', 'pi', 'EULER', 'euler'],
+                subroutinesAndArrays: ['docu$'],
+                labels: [],
+            };
         }
 
         const abstractSyntaxTree = this.parser.parse(source, {
             version,
-            internalLabels: Object.keys(this.instructionLabels),
-            subroutineNames: Object.keys(this.subroutines),
+            symbolTable: this.symbolTable,
+
+            internalLabels: this.internalLabels,
+            subroutineNames: this.subroutineNames,
         });
 
         if (!compilingAtRuntime) {
@@ -35,7 +47,7 @@ class Parser {
 
         this.evaluateNode(abstractSyntaxTree);
 
-        // TODO: test if sending everything when using COMPILE makes a significant difference
+        // TODO: test whether sending everything when using COMPILE has a significant impact on performance
         return this.isStuck ? null : {
             subroutines: this.subroutines,
             instructions: this.instructions,
@@ -43,6 +55,8 @@ class Parser {
             data: this.data,
             dataLabels: this.dataLabels,
             documentation: this.documentation,
+
+            symbolTable: this.symbolTable,
         };
     }
 
@@ -52,11 +66,7 @@ class Parser {
 
     evaluateArgumentNodes(nodes) {
         for (let node of nodes) {
-            if (node.type === 'NUMERIC_FUNCTION_OR_ARRAY' || node.type === 'STRING_FUNCTION_OR_ARRAY') {
-                this['evaluate' + node.type](node, true); // true => the function or array is passed as an argument
-            } else {
-                this.evaluateNode(node);
-            }
+            this.evaluateNode(node);
         }
     }
 
@@ -67,7 +77,7 @@ class Parser {
     }
 
     addInstruction(...instruction) {
-        this.instructions.push({ line: instruction[0], type: 'instruction' + instruction[1], arguments: instruction.slice(2)});
+        this.instructions.push({ line: instruction[0], type: 'instruction' + instruction[1], arguments: instruction.slice(2) });
     }
 
     addInstructionPlaceholder() {
@@ -75,7 +85,7 @@ class Parser {
     }
 
     insertInstruction(index, ...instruction) {
-        this.instructions[index] = { line: instruction[0], type: 'instruction' + instruction[1], arguments: instruction.slice(2)};
+        this.instructions[index] = { line: instruction[0], type: 'instruction' + instruction[1], arguments: instruction.slice(2) };
     }
 
     escapeString(string) {
@@ -116,5 +126,25 @@ class Parser {
 
     asciiEncodeString(string) {
         return this.compilingAtRuntime ? string : this.asciiTable.encode(string);
+    }
+
+    stringVariable(variableName) {
+        return this.symbolTable.stringVariables.indexOf(variableName);
+    }
+
+    numericVariable(variableName) {
+        return this.symbolTable.numericVariables.indexOf(variableName);
+    }
+
+    subroutineOrArray(subroutineOrArrayName) {
+        return this.symbolTable.subroutinesAndArrays.indexOf(subroutineOrArrayName);
+    }
+
+    label(labelName) {
+        return this.symbolTable.labels.indexOf(labelName);
+    }
+
+    labels(labelNames) {
+        return labelNames.map(labelName => this.symbolTable.labels.indexOf(labelName));
     }
 }

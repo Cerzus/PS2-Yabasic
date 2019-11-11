@@ -4,9 +4,9 @@
 ?str$(123456789123456789)
 ?str$(-12345.67890, "##.##")
 ?str$(-12345.67890, "%+- 0#10.10f")
-?inkey$
-?inkey$()
-?inkey$(1)
+#?inkey$
+#?inkey$()
+#?inkey$(1)
 ?chr$(123)
 ?upper$("moi")
 ?lower$("MOI")
@@ -15,12 +15,9 @@
 ?trim$("   moi   ")+"hoi"
 ?date$
 ?time$
-?peek$("moi")
-?peek$("moi", "moi")
-?token$("moi")
-?token$("moi", "moi")
-?split$("moi")
-?split$("moi", "moi")
-?getbit$(1, 1, 1, 1)
-?getscreen$(1, 1, 1, 1)
+?peek$("windoworigin")
+a$="klomoipok"
+?split$(a$, "moi")
+?split$(a$)
+?getscreen$(-1, 1, 10, 10)
 ?hex$(123456)

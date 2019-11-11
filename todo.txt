@@ -4,15 +4,16 @@ interface:
     version pick option
 
 both versions:
+    check usage of ~~ and numberToInt everywhere
+    correct line number in errors (especially for COMPILE)
     a()=a() error
     text a(),a(),a$(),a$() error
-    symbol dump poke
     empty window origin
     empty textalign
     improve putscreen
     better array dim memory check
-    check usage of ~~ and numberToInt everywhere
-    correct line number in errors (especially for COMPILE)
+    multiple array parameters with the same name
+    convert array argument to static inside subroutine
 
 yabasic 2.64:
     arraydim/arraysize bug (fixed in 2.65)

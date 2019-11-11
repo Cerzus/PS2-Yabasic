@@ -10,8 +10,8 @@ class Interpreter {
     constructor() {
         this.version = 2.66;
         this.fps = 50;
-        this.cpuUsage = 1;
-        this.maxInstructionsPerFrame = 1400000;
+        this.cpuUsage = 0.2;
+        this.maxInstructionsPerFrame = 140000000;
         this.resolution = {
             width: 640,
             height: 512,
@@ -91,7 +91,7 @@ class Interpreter {
         div.style.bottom = 0;
         div.style.left = 0;
         div.style.right = 0;
-        div.style.opacity = 0;//0.8;
+        div.style.opacity = 0.8;
         div.style.backgroundImage = 'url("data/vignette.png")';
         div.style.backgroundPosition = '50%';
         div.style.backgroundSize = '120% 100%';
@@ -108,7 +108,7 @@ class Interpreter {
         div.append(this.graphicsScreen.getDomElement());
         div.append(this.textScreen.getDomElement());
         div.append(this.messageDiv);
-        div.append(this.overlayDiv);
+        // div.append(this.overlayDiv);
         const screenDiv = div;
 
         // dualshock 2
@@ -238,12 +238,12 @@ class Interpreter {
         if (error.message.constructor === Array) {
             var message = this.strings.get(...error.message);
         } else if (this.isWaitingForRuntimeCompilation) {
-            var message = this.strings.get('ParseErrorAt', this.asciiTable.toTextScreenString(error.found));
+            var message = this.strings.get('ParseErrorAt', error.found !== null ? this.asciiTable.toTextScreenString(error.found) : null);
         } else {
             var message = this.strings.get('ParseErrorAt', error.found);
         }
 
-        this.errorQueue.push(['ParseError', error.location.start.line, message]);
+        this.errorQueue.push({ type: 'ParseError', line: error.location.start.line, message });
 
         if (this.isWaitingForRuntimeCompilation) {
             this.errorsFound = true;
@@ -262,33 +262,30 @@ class Interpreter {
 
             this.hideMessage();
 
-            this.subroutines = compiledSource.subroutines;
             this.instructions = compiledSource.instructions;
-            this.instructionLabels = compiledSource.instructionLabels;
             this.data = compiledSource.data;
-            this.dataLabels = compiledSource.dataLabels;
 
             this.numberOfDataItems = this.data.length;
 
-            this.arrays = {
+            this.symbolStack = new SymbolStack(compiledSource.symbolTable);
+            this.symbolStack.setGlobalVariables({
+                PI: 3.14159265359,
+                pi: 3.14159265359,
+                EULER: 2.71828182864,
+                euler: 2.71828182864,
+            });
+            this.symbolStack.setGlobalSubroutinesAndArrays({
                 docu$: {
                     dimensions: [compiledSource.documentation.length],
                     values: compiledSource.documentation,
                 },
-            };
+                ...compiledSource.subroutines,
+            });
+            this.symbolStack.setGlobalInstructionLabels(compiledSource.instructionLabels);
+            this.symbolStack.setGlobalDataLabels(compiledSource.dataLabels);
 
-            this.variables = {
-                pi: 3.14159265359,
-                PI: 3.14159265359,
-                euler: 2.71828182864,
-                EULER: 2.71828182864,
-            };
-
-            console.log('instructions', this.instructions);
-            // console.log('subroutines', this.subroutines);
-            // console.log('instructionLabels', this.instructionLabels);
-            // console.log('data', this.data);
-            // console.log('dataLabels', this.dataLabels);
+            this.logInstructions();
+            console.log('Symbol stack', this.symbolStack);
 
             this.readControls = false;
             this.screenWidth = 80;
@@ -308,7 +305,7 @@ class Interpreter {
             this.lineToX = null;
             this.lineToY = null;
             this.font = '';
-            this.streamError = [0, ['']];
+            this.streamError = { id: 0, message: [''] };
             this.streams = new Array(16).fill(false);
 
             this.graphicsScreen.reset(...this.colors[0]); // need to do this here, because the graphics screen might be shown before being opened (.e.g on a setrgb runtime error)
@@ -317,14 +314,7 @@ class Interpreter {
             this.valuesStack = [];
             this.valuesStackLength = 0;
 
-            this.subroutineName = null; // the current subroutine that's being executed
-            this.arrayReferenceParameters = [];
-            this.localVariables = []; // holds an array of names of all variables that currently have local scope
-            this.localArrays = []; // holds an array of names of all arrays that currently have local scope
-            this.staticVariables = []; // hold an array of names of all variables that currently have static scope
-            this.staticArrays = []; // hold an array of names of all arrays that currently have static scope
             this.callStack = []; // holds RETURN information for both subroutine calls and GOSUBs
-            this.currentSubroutineLevel = 0; // how many subroutines within subroutine's we are located
 
             // this.delayStartTime = null; // used for WAIT, PAUSE, BELL, BEEP
             this.waitStartTime = null; // used for WAIT, PAUSE
@@ -373,11 +363,10 @@ class Interpreter {
 
         try {
             let n = 0;
-            const ins = 'instruction';
             do {
-                // run a maximum of ten instructions before checking if enough time has passed to take a break
+                // run a maximum of one hundred instructions before checking if enough time has passed to take a break
                 for (let i = 0; i < 100 && !this.endFrame && running; i++) {
-                    const instruction = this.instructions[this.programCounter++];
+                    const instruction = this.instructions[this.programCounter++]; // cannot cache instructions, because COMPILE might add more
 
                     switch (instruction.type) {
                         case 'instructionLOAD_NUMERIC_VARIABLE':
@@ -406,11 +395,11 @@ class Interpreter {
             return;
         }
 
-        this.textScreen.update();
-        this.graphicsScreen.update();
         if (this.hideTextScreen) {
+            this.graphicsScreen.update();
             this.textScreen.hide();
         } else {
+            this.textScreen.update();
             this.textScreen.show();
         }
 
@@ -424,7 +413,8 @@ class Interpreter {
         }
         else if (running) {
             this.requestFrame(endOfFrameTime - Date.now());
-        } else {console.log(Date.now()-this.programStartedTime)
+        } else {
+            console.log(Date.now() - this.programStartedTime)
             this.stop();
             this.showMessage(this.strings.get('ExecutionComplete'), this.strings.get('ProgramCompletedExecution'));
         }
@@ -440,14 +430,9 @@ class Interpreter {
             clearTimeout(this.runTimeoutId);
             this.runTimeoutId = null;
 
-            console.log('variables', this.variables);
-            // console.log('arrays', this.arrays);
-            // console.log('inputBuffer', this.inputBuffer);
-            // console.log('subroutine', this.subroutine);
+            this.textScreen.update();
+            this.graphicsScreen.update();
 
-            // if (this.valuesStack.length > 0) {
-            //     console.error('values left in stack!', this.valuesStack);
-            // }
             if (this.valuesStackLength > 0) {
                 console.error('values left in stack!', this.valuesStack.slice(0, this.valuesStackLength));
             }
@@ -455,7 +440,7 @@ class Interpreter {
     }
 
     showErrorMessage() {
-        const latestErrorType = this.errorQueue[this.errorQueue.length - 1][0];
+        const latestErrorType = this.errorQueue[this.errorQueue.length - 1].type;
 
         if (this.programCounter > 0 && latestErrorType !== 'FatalError') {
             this.queueError('ProgramStoppedDueToError');
@@ -467,11 +452,11 @@ class Interpreter {
         let previousLine;
         for (let i = 0; i < this.errorQueue.length && message.length <= 252; i++) {
             const error = this.errorQueue[i];
-            const line = error[1];
-            if (line === previousLine) {
-                message += '---' + this.strings.get(error[0]) + ': ' + error[2] + '\n';
-            } else {
-                message += '---' + this.strings.get(error[0] + 'In', this.programName, line) + error[2] + '\n';
+            const line = error.line;
+            if (line !== previousLine || error.type === 'Dump') {
+                message += '---' + this.strings.get(error.type + 'In', this.programName, line) + error.message + '\n';
+            } else if (line === previousLine) {
+                message += '---' + this.strings.get(error.type) + ': ' + error.message + '\n';
             }
             previousLine = line;
         }
@@ -495,5 +480,11 @@ class Interpreter {
 
     hideMessage() {
         this.messageDiv.style.display = 'none';
+    }
+
+    logInstructions() {
+        console.log('Instructions: ', this.instructions.map(instruction => {
+            return [instruction.line, instruction.type.substring(11), ...instruction.arguments];
+        }));
     }
 }

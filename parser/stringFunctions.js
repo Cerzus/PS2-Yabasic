@@ -12,17 +12,17 @@ Parser.prototype.stringReplacementAssignment = function (node, instruction) {
                 this.evaluateNode(node.c);
             }
             this.evaluateNode(node.right);
-            this.addInstruction(node.line, instruction + '$_VARIABLE', node.a.name, node.c !== null);
+            this.addInstruction(node.line, instruction + '$_VARIABLE', this.stringVariable(node.a.name), node.c !== null);
             break;
         case 'STRING_ARRAY_MUTATOR':
             this.evaluateArgumentNodes(node.a.index);
-            this.addInstruction(node.line, 'CALL_ARRAY_PUSH_INDICES', node.a.array, node.a.index.length, node.c !== null);
+            this.addInstruction(node.line, 'CALL_ARRAY_PUSH_INDICES', this.subroutineOrArray(node.a.array), node.a.index.length, node.c !== null);
             this.evaluateNode(node.b);
             if (node.c !== null) {
                 this.evaluateNode(node.c);
             }
             this.evaluateNode(node.right);
-            this.addInstruction(node.line, instruction + '$_ARRAY', node.a.array, node.a.index.length, node.c !== null);
+            this.addInstruction(node.line, instruction + '$_ARRAY', this.subroutineOrArray(node.a.array), node.a.index.length, node.c !== null);
             break;
     }
 };
@@ -33,15 +33,15 @@ Parser.prototype.splitStringAssignment = function (node, removeEmptyStrings) {
             if (node.b !== null) {
                 this.evaluateNode(node.b);
             }
-            this.addInstruction(node.line, 'SPLIT$_VARIABLE', node.b !== null, removeEmptyStrings, node.a.name);
+            this.addInstruction(node.line, 'SPLIT$_VARIABLE', node.b !== null, removeEmptyStrings, this.stringVariable(node.a.name));
             break;
         case 'STRING_ARRAY_MUTATOR':
             this.evaluateArgumentNodes(node.a.index);
-            this.addInstruction(node.line, 'CALL_ARRAY_PUSH_INDICES', node.a.array, node.a.index.length);
+            this.addInstruction(node.line, 'CALL_ARRAY_PUSH_INDICES', this.subroutineOrArray(node.a.array), node.a.index.length);
             if (node.b !== null) {
                 this.evaluateNode(node.b);
             }
-            this.addInstruction(node.line, 'SPLIT$_ARRAY', node.b !== null, removeEmptyStrings, node.a.array, node.a.index.length);
+            this.addInstruction(node.line, 'SPLIT$_ARRAY', node.b !== null, removeEmptyStrings, this.subroutineOrArray(node.a.array), node.a.index.length);
             break;
     }
 };
