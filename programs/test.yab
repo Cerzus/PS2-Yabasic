@@ -1,7 +1,7 @@
-sub h()
-static k(9)
-#dim kpoii(9)
-end sub
-h()
-poke "dump","symbols"
-dot 9,9
+open window 1,1
+for a=0 to 1000
+setrgb 1,ran(256),ran(256),ran(256)
+#setrgb 2,ran(256),ran(256),ran(256)
+#setrgb 3,ran(256),ran(256),ran(256)
+text ran(640),ran(512),"moi","cc"
+next

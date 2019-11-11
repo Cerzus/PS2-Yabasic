@@ -752,7 +752,6 @@ Statement
     / Mid$AssignmentStatement
     / AssignmentStatement
     / ImportStatement
-    / DocumentationStatement
     / &{ return options.version >= 2.65; } statement:CompileStatement { return statement; }
     / &{ return options.version >= 2.65; } statement:Execute$Statement { return statement; }
     / &{ return options.version >= 2.65; } statement:ExecuteStatement { return statement; }
@@ -808,6 +807,7 @@ Statement
     / PokeStatement
     / EndStatement
     / ExitStatement
+    / DocumentationStatement
 
 Left$AssignmentStatement
     = (LetToken _)?Left$Token _ "(" _ a:StringScalarOrArray _ "," _ b:NumericExpression _ ")" _ "=" _ right:StringExpression

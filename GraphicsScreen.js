@@ -5,35 +5,36 @@ class GraphicsScreen {
         this.width = width;
         this.height = height;
 
-        // graphics back buffer
         var canvas = document.createElement('canvas');
         canvas.width = this.width;
         canvas.height = this.height;
-        const backBuffer = canvas;
+        this.domElement = canvas;
 
-        // graphics front buffer
-        var canvas = document.createElement('canvas');
-        canvas.style.position = 'absolute';
-        canvas.style.top = 0;
-        canvas.style.left = 0;
-        canvas.width = this.width;
-        canvas.height = this.height;
-        this.frontBuffer = canvas;
+        this.context = canvas.getContext('2d');
 
-        // dom element
-        const div = document.createElement('div');
-        div.style.position = 'relative';
-        div.append(backBuffer);
-        div.append(this.frontBuffer);
-        this.domElement = div;
+        this.buffers = [];
+        for (let i = 0; i < 2; i++) {
+            const imageData = this.context.createImageData(canvas.width, canvas.height);
+            this.buffers.push({
+                imageData,
+                pixels8: new Uint8Array(imageData.data.buffer),
+                pixels32: new Uint32Array(imageData.data.buffer),
+            });
+        }
 
-        this.backBufferContext = backBuffer.getContext('2d', { alpha: false });
-        this.frontBufferContext = this.frontBuffer.getContext('2d');
+        this.fontBitmap = this.createFontBitmap();
 
-        // const tempBuffer = document.createElement('canvas');
-        // tempBuffer.width = this.width;
-        // tempBuffer.height = this.height;
-        // this.tempBufferContext = tempBuffer.getContext('2d');
+        // determine rgb to uint32 conversion based on endianness
+        this.rgbToUint32 = (new Uint8Array(new Uint32Array([1]).buffer)[0]) ?
+            function (r, g, b) {
+                return 0xff000000 + (b << 16) + (g << 8) + r;
+            } : function (r, g, b) {
+                return (r << 24) + (g << 16) + (b << 8) + 0xff;
+            };
+    }
+
+    rgbArrayToUint32(color) {
+        return this.rgbToUint32(255 * color[0], 255 * color[1], 255 * color[2]);
     }
 
     getDomElement() {
@@ -41,18 +42,24 @@ class GraphicsScreen {
     }
 
     update() {
-        this.backBufferContext.putImageData(this.pixels, 0, 0);
+        if (this.isDirty) {
+            this.context.putImageData(this.buffers[this.dispBuf].imageData, 0, 0);
+            this.isDirty = this.drawBuf === this.dispBuf;
+        }
     }
 
     reset(r, g, b) {
-        this.frontBufferContext.canvas.style.display = 'none';
-        this.frontBufferContext.fillStyle = 'rgb(' + r * 255 + ',' + g * 255 + ',' + b * 255 + ')';
-        this.frontBufferContext.fillRect(0, 0, this.width, this.height);
-        this.backBufferContext.fillStyle = 'rgb(' + r * 255 + ',' + g * 255 + ',' + b * 255 + ')';
-        this.backBufferContext.fillRect(0, 0, this.width, this.height);
-        this.bufferState = 0;
+        for (let i = 0; i < 2; i++) {
+            this.buffers[i].pixels32.fill(this.rgbToUint32(r, g, b));
+        }
 
-        this.pixels = this.backBufferContext.getImageData(0, 0, this.width, this.height);
+        this.drawBuf = 0;
+        this.dispBuf = 0;
+
+        this.pixels8 = this.buffers[this.drawBuf].pixels8;
+        this.pixels32 = this.buffers[this.drawBuf].pixels32;
+
+        this.isDirty = true;
     }
 
     clearWindow(r, g, b) {
@@ -60,87 +67,137 @@ class GraphicsScreen {
     }
 
     setDrawBuf(buffer) {
-        this.updateBufferState(
-            !!buffer ? (this.bufferState | 2) : (this.bufferState & 1)
-        );
+        if (buffer !== this.drawBuf) {
+            this.drawBuf = buffer;
+
+            this.pixels8 = this.buffers[this.drawBuf].pixels8;
+            this.pixels32 = this.buffers[this.drawBuf].pixels32;
+
+            if (buffer === this.dispBuf) {
+                this.isDirty = true;
+            }
+        }
     }
 
     setDispBuf(buffer) {
-        this.updateBufferState(
-            !!buffer ? (this.bufferState | 1) : (this.bufferState & 2)
-        );
+        if (buffer !== this.dispBuf) {
+            this.dispBuf = buffer;
+
+            if (buffer === this.drawBuf) {
+                this.isDirty = true;
+            }
+        }
     }
 
-    text(data) {
-        function getPowerOfTwo(value) {
-            let pow = 1;
-            while (pow < value) {
-                pow *= 2;
+    rectangle(x1, y1, x2, y2, color, fill) {
+        const color32 = this.rgbArrayToUint32(color);
+
+        if (fill) {
+            const iStart = Math.max(Math.min(y1, y2), 0);
+            const iEnd = Math.min(Math.max(y1, y2), this.height);
+            const jStart = Math.max(Math.min(x1, x2), 0);
+            const jEnd = Math.min(Math.max(x1, x2), this.width);
+
+            for (let i = iStart; i < iEnd; i++) {
+                let index = this.width * i + jStart;
+                for (let j = jStart; j < jEnd; j++) {
+                    this.pixels32[index++] = color32;
+                }
             }
-            return pow;
+        } else {
+            if (x1 !== x2) {
+                this.line(x1, y1, x2, y1, color);
+                this.line(x1, y2, x2 - 1, y2, color);
+            }
+            if (y1 !== y2) {
+                this.line(x1, y1, x1, y2, color);
+                this.line(x2, y1, x2, y2 - 1, color);
+            }
         }
+    }
 
-        let canvas = document.createElement('canvas');
-        let ctx = canvas.getContext('2d');
-        let text = data.text;
-
-        ctx.font = '16.6px Lucida Console';
-        let textWidth = text.reduce((acc, curr) => { return Math.max(acc, curr.length); }, 0);
-        let textHeight = 18 * text.length;
-
-        canvas.width = getPowerOfTwo(textWidth * 10);
-        canvas.height = getPowerOfTwo(textHeight);
-        ctx.fillStyle = `rgb(${data.color})`;
-        ctx.textBaseline = 'top';
-        ctx.font = '16.6px Lucida Console';
-
-        for (let i = 0; i < text.length; i++) {
-            ctx.fillText(text[i], 0, 18 * i);
+    createFontBitmap() {
+        const fontCanvas = document.createElement('canvas');
+        fontCanvas.width = 2560;
+        fontCanvas.height = 16;
+        // this.document.body.append(fontCanvas);
+        const fontContext = fontCanvas.getContext('2d');
+        fontContext.font = '16.6px Lucida Console';
+        fontContext.textBaseline = 'top';
+        fontContext.fillStyle = 'white';
+        for (let i = 0; i < 256; i++) {
+            if (i & 0x60) {
+                fontContext.fillText(String.fromCharCode(i), 10 * i, 0);
+            }
         }
-
-        this.gl.activeTexture(this.gl.TEXTURE0);
-        this.gl.bindTexture(this.gl.TEXTURE_2D, this.textTexture);
-        // let texture = this.gl.createTexture();
-
-        // this.gl.pixelStorei(this.gl.UNPACK_FLIP_Y_WEBGL, true);
-
-        // this.gl.bindTexture(this.gl.TEXTURE_2D, texture);
-        this.gl.texImage2D(this.gl.TEXTURE_2D, 0, this.gl.RGBA, this.gl.RGBA, this.gl.UNSIGNED_BYTE, canvas);
-        // this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_MIN_FILTER, this.gl.NEAREST);
-
-        // this.gl.activeTexture(this.gl.TEXTURE0);
-        // this.gl.uniform1i(this.textProgram.samplerUniform, 0);
-
-        let x = data.x + 1;
-        if (data.alignment[0] === 'c') x -= Math.ceil(textWidth / 2) * 10;
-        if (data.alignment[0] === 'r') x -= ~~textWidth * 10;
-        let y = data.y + 7;
-        if (data.alignment[1] === 'c') y -= ~~(8 * text.length) + 11;
-        if (data.alignment[1] === 'b') y -= ~~textHeight;
-
-        let x1 = (x - 320) / 320;
-        let y1 = (256 - y) / 256;
-        let x2 = x1 + canvas.width / 320;
-        let y2 = y1 - canvas.height / 256;
-
-        this.useTextProgram(
-            [x1, y1, x2, y1, x1, y2, x2, y2],
-            [0, 1, 1, 1, 0, 0, 1, 0],
-        );
-
-        this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4);
+        const data = fontContext.getImageData(0, 0, fontCanvas.width, fontCanvas.height).data
+        const bitmap = [];
+        for (let i = 0; i < data.length / 4; i++) {
+            bitmap[i] = data[i * 4 + 3] / 255;
+        }
+        return bitmap;
     }
 
     dot(x, y, color) {
         if (y >= 0 && y < this.height && x >= 0 && x < this.width) {
-            const index = 4 * (this.width * y + x);
-            this.pixels.data[index + 0] = color[0] * 255;
-            this.pixels.data[index + 1] = color[1] * 255;
-            this.pixels.data[index + 2] = color[2] * 255;
+            this.pixels32[this.width * y + x] = this.rgbArrayToUint32(color);
         }
     }
 
-    // TODO
+
+    text(text, x, y, color, alignment) {
+        let textWidth = 0;
+        for (let i = 0; i < text.length; i++) {
+            textWidth = Math.max(textWidth, text[i].replace(/[^\S ]/g, '').length);
+        }
+        let textHeight = 18 * text.length;
+
+        x = x + 1;
+        if (alignment[0] === 'c') x -= Math.ceil(textWidth / 2) * 10;
+        if (alignment[0] === 'r') x -= textWidth * 10;
+        y = y + 7;
+        if (alignment[1] === 'c') y -= Math.ceil(text.length / 2) * 18;
+        if (alignment[1] === 'b') y -= text.length * 18;
+
+        const r = color[0] * 255;
+        const g = color[1] * 255;
+        const b = color[2] * 255;
+
+        const firstCompleteLineIndex = Math.max(0, Math.ceil(-y / 18));
+        const lastCompleteLineIndex = Math.min(text.length, text.length - Math.ceil(y + 18 * text.length - this.height - 2 /* subtract 2 because characters are only 16 pixels high */) / 18) - 1;
+        const firstCompleteCharacterIndex = Math.max(0, Math.ceil(-x / 10));
+
+        // TODO: add incomplete line
+        for (let i = firstCompleteLineIndex; i <= lastCompleteLineIndex; i++) {
+            const line = text[i];
+            const lastCompleteCharacterIndex = Math.min(line.length, line.length - Math.ceil(x + 10 * line.length - this.width) / 10) - 1;
+            // TODO: add incomplete character
+            for (let j = firstCompleteCharacterIndex; j <= lastCompleteCharacterIndex; j++) {
+                drawCompleteCharacter.bind(this)(line.charCodeAt(j), x + 10 * j, y + 18 * i);
+            }
+            // TODO: add incomplete character
+        }
+        // TODO: add incomplete line
+
+        function drawCompleteCharacter(ascii, x, y) {
+            const sourceIndex = (10 * ascii);
+            const destinationIndex = 4 * (this.width * y + x);
+
+            for (let pixelY = 0; pixelY < 16; pixelY++) {
+                let sIndex = sourceIndex + (2560 * pixelY);
+                let dIndex = destinationIndex + 4 * (this.width * pixelY);
+                for (let pixelX = 0; pixelX < 10; pixelX++) {
+                    const alpha = this.fontBitmap[sIndex++];
+                    this.pixels8[dIndex + 0] = (1 - alpha) * this.pixels8[dIndex + 0] + alpha * r;
+                    this.pixels8[dIndex + 1] = (1 - alpha) * this.pixels8[dIndex + 1] + alpha * g;
+                    this.pixels8[dIndex + 2] = (1 - alpha) * this.pixels8[dIndex + 2] + alpha * b;
+                    dIndex += 4;
+                }
+            }
+        }
+    }
+
+    // TODO: add bounding
     line(x1, y1, x2, y2, color) {
         let x, y, dx, dy, dx1, dy1, px, py, xe, ye, i;
 
@@ -160,10 +217,8 @@ class GraphicsScreen {
                 x = x2; y = y2; xe = x1 - 1;
             }
 
-            const index = 4 * (this.width * y + x);
-            this.pixels.data[index + 0] = color[0] * 255;
-            this.pixels.data[index + 1] = color[1] * 255;
-            this.pixels.data[index + 2] = color[2] * 255;
+            const index = (this.width * y + x);
+            this.pixels32[index] = this.rgbArrayToUint32(color);
 
             for (i = 0; x < xe; i++) {
                 x = x + 1;
@@ -179,10 +234,8 @@ class GraphicsScreen {
                     px = px + 2 * (dy1 - dx1);
                 }
 
-                const index = 4 * (this.width * y + x);
-                this.pixels.data[index + 0] = color[0] * 255;
-                this.pixels.data[index + 1] = color[1] * 255;
-                this.pixels.data[index + 2] = color[2] * 255;
+                const index = (this.width * y + x);
+                this.pixels32[index] = this.rgbArrayToUint32(color);
             }
 
         } else {
@@ -192,10 +245,8 @@ class GraphicsScreen {
                 x = x2; y = y2; ye = y1 - 1;
             }
 
-            const index = 4 * (this.width * y + x);
-            this.pixels.data[index + 0] = color[0] * 255;
-            this.pixels.data[index + 1] = color[1] * 255;
-            this.pixels.data[index + 2] = color[2] * 255;
+            const index = (this.width * y + x);
+            this.pixels32[index] = this.rgbArrayToUint32(color);
 
             for (i = 0; y < ye; i++) {
                 y = y + 1;
@@ -211,75 +262,191 @@ class GraphicsScreen {
                     py = py + 2 * (dx1 - dy1);
                 }
 
-                const index = 4 * (this.width * y + x);
-                this.pixels.data[index + 0] = color[0] * 255;
-                this.pixels.data[index + 1] = color[1] * 255;
-                this.pixels.data[index + 2] = color[2] * 255;
+                const index = (this.width * y + x);
+                this.pixels32[index] = this.rgbArrayToUint32(color);
             }
         }
     }
 
-    rectangle(x1, y1, x2, y2, color, fill) {
-        if (fill) {
-            const iStart = Math.max(Math.min(y1, y2), 0);
-            const iEnd = Math.min(Math.max(y1, y2), this.height);
-            const jStart = Math.max(Math.min(x1, x2), 0);
-            const jEnd = Math.min(Math.max(x1, x2), this.width);
-            const r = color[0]*255;
-            const g = color[1]*255;
-            const b = color[2]*255;
+    triangle(x1,y1,x2,y2,x3,y3,color) {
+this.gtriangle(x1,y1,x2,y2,x3,y3,color,color,color);
+    }
 
-            for (let i = iStart; i < iEnd; i++) {
-                let index = 4 * (this.width * i + jStart);
-                for (let j = jStart; j < jEnd; j++) {
-                    this.pixels.data[index + 0] = r;
-                    this.pixels.data[index + 1] = g;
-                    this.pixels.data[index + 2] = b;
-                    index += 4;
-                }
+    gtriangle(x1, y1, x2, y2, x3, y3, color1, color2, color3) {
+        var v1 = { x: x1, y: y1, r: 255 * color1[0], g: 255 * color1[1], b: 255 * color1[2] };
+        var v2 = { x: x2, y: y2, r: 255 * color2[0], g: 255 * color2[1], b: 255 * color2[2] };
+        var v3 = { x: x3, y: y3, r: 255 * color3[0], g: 255 * color3[1], b: 255 * color3[2] };
+
+        if (v1.y > v2.y) {
+            let temp = v1; v1 = v2; v2 = temp;
+        }
+        if (v2.y > v3.y) {
+            let temp = v2; v2 = v3; v3 = temp;
+        }
+        if (v1.y > v2.y) {
+            let temp = v1; v1 = v2; v2 = temp;
+        }
+
+        if (v2.y === v3.y) {
+            if (v2.x > v3.x) {
+                let temp = v2; v2 = v3; v3 = temp;
             }
+            this.fillBottomFlatTriangle(v1, v2, v3);
+        } else if (v1.y === v2.y) {
+            if (v1.x > v2.x) {
+                let temp = v1; v1 = v2; v2 = temp;
+            }
+            this.fillTopFlatTriangle(v1, v2, v3);
         } else {
-            if (x1 !== x2) {
-                this.line(x1, y1, x2, y1, color);
-                this.line(x1, y2, x2 - 1, y2, color);
+            const foo = (v2.y - v1.y) / (v3.y - v1.y);
+            let v4 = {
+                x: v1.x + (v3.x - v1.x) * foo,
+                y: v2.y,
+                r: v1.r + (v3.r - v1.r) * foo,
+                g: v1.g + (v3.g - v1.g) * foo,
+                b: v1.b + (v3.b - v1.b) * foo,
+            };
+            if (v2.x > v4.x) {
+                let temp = v2; v2 = v4; v4 = temp;
             }
-            if (y1 !== y2) {
-                this.line(x1, y1, x1, y2, color);
-                this.line(x2, y1, x2, y2 - 1, color);
+            this.fillBottomFlatTriangle(v1, v2, v4);
+            this.fillTopFlatTriangle(v2, v4, v3);
+        }
+
+    }
+
+    fillBottomFlatTriangle(v1, v2, v3) {
+        const yTop = v1.y;
+        const yBottom = v3.y;
+
+        const x1 = v1.x;
+        const x2 = v2.x;
+        const x3 = v3.x;
+
+        const r1 = v1.r;
+        const g1 = v1.g;
+        const b1 = v1.b;
+
+        const r2 = v2.r;
+        const g2 = v2.g;
+        const b2 = v2.b;
+
+        const r3 = v3.r;
+        const g3 = v3.g;
+        const b3 = v3.b;
+
+        const oneOverHeight = 1 / (yBottom - yTop);
+        const slopeLeft = (x2 - x1) * oneOverHeight;
+        const slopeRight = (x3 - x1) * oneOverHeight;
+        const rLeftInc = (r2 - r1) * oneOverHeight;
+        const gLeftInc = (g2 - g1) * oneOverHeight;
+        const bLeftInc = (b2 - b1) * oneOverHeight;
+
+        const oneOverWidth = 1 / (x3 - x2);
+        const rInc = (r3 - r2) * oneOverWidth;
+        const gInc = (g3 - g2) * oneOverWidth;
+        const bInc = (b3 - b2) * oneOverWidth;
+
+        let iStart = ~~Math.max(0, yTop);
+        let iEnd = ~~Math.min(yBottom, this.height);
+
+        const foo = iStart - yTop;
+        let xLeft = x1 + slopeLeft * foo;
+        let xRight = x1 + slopeRight * foo;
+        let rLeft = r1 + rLeftInc * foo;
+        let gLeft = g1 + gLeftInc * foo;
+        let bLeft = b1 + bLeftInc * foo;
+
+        for (let i = iStart; i < iEnd; i++) {
+            let jStart = ~~Math.max(0, xLeft);
+            let jEnd = ~~Math.min(xRight, this.width);
+
+            const foo = (jStart - xLeft);
+            let index = (this.width * i + jStart);
+            let r = rLeft + rInc * foo;
+            let g = gLeft + gInc * foo;
+            let b = bLeft + bInc * foo;
+
+            for (let j = jStart; j < jEnd; j++) {
+                this.pixels32[index++] = this.rgbToUint32(r, g, b);
+                r += rInc;
+                g += gInc;
+                b += bInc;
             }
+
+            xLeft += slopeLeft;
+            xRight += slopeRight;
+            rLeft += rLeftInc;
+            gLeft += gLeftInc;
+            bLeft += bLeftInc;
         }
     }
 
-    triangle(data) {
-        let x1 = (data.x1 - 320 + 0.5) / 320;
-        let y1 = (256 - data.y1 - 0.5) / 256;
-        let x2 = (data.x2 - 320 + 0.5) / 320;
-        let y2 = (256 - data.y2 - 0.5) / 256;
-        let x3 = (data.x3 - 320 + 0.5) / 320;
-        let y3 = (256 - data.y3 - 0.5) / 256;
+    fillTopFlatTriangle(v1, v2, v3) {
+        const yTop = v1.y;
+        const yBottom = v3.y;
 
-        this.useShapesProgram(
-            [x1, y1, x2, y2, x3, y3],
-            [...data.color, ...data.color, ...data.color],
-        );
+        const x1 = v1.x;
+        const x2 = v2.x;
+        const x3 = v3.x;
 
-        this.gl.drawArrays(data.fill ? this.gl.TRIANGLE_STRIP : this.gl.LINE_LOOP, 0, 3);
-    }
+        const r1 = v1.r;
+        const g1 = v1.g;
+        const b1 = v1.b;
 
-    gtriangle(data) {
-        let x1 = (data.x1 - 320 + 0.5) / 320;
-        let y1 = (256 - data.y1 - 0.5) / 256;
-        let x2 = (data.x2 - 320 + 0.5) / 320;
-        let y2 = (256 - data.y2 - 0.5) / 256;
-        let x3 = (data.x3 - 320 + 0.5) / 320;
-        let y3 = (256 - data.y3 - 0.5) / 256;
+        const r2 = v2.r;
+        const g2 = v2.g;
+        const b2 = v2.b;
 
-        this.useShapesProgram(
-            [x1, y1, x2, y2, x3, y3],
-            [...data.color1, ...data.color2, ...data.color3],
-        );
+        const r3 = v3.r;
+        const g3 = v3.g;
+        const b3 = v3.b;
 
-        this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 3);
+        const oneOverHeight = 1 / (yBottom - yTop);
+        const slopeLeft = (x3 - x1) * oneOverHeight;
+        const slopeRight = (x3 - x2) * oneOverHeight;
+        const rLeftInc = (r3 - r1) * oneOverHeight;
+        const gLeftInc = (g3 - g1) * oneOverHeight;
+        const bLeftInc = (b3 - b1) * oneOverHeight;
+
+        const oneOverWidth = 1 / (x2 - x1);
+        const rInc = (r2 - r1) * oneOverWidth;
+        const gInc = (g2 - g1) * oneOverWidth;
+        const bInc = (b2 - b1) * oneOverWidth;
+
+        let iStart = ~~Math.max(0, yTop);
+        let iEnd = ~~Math.min(yBottom, this.height);
+
+        const foo = iStart - yTop;
+        let xLeft = x1 + slopeLeft * foo;
+        let xRight = x2 + slopeRight * foo;
+        let rLeft = r1 + rLeftInc * foo;
+        let gLeft = g1 + gLeftInc * foo;
+        let bLeft = b1 + bLeftInc * foo;
+
+        for (let i = iStart; i < iEnd; i++) {
+            let jStart = ~~Math.max(0, xLeft);
+            let jEnd = ~~Math.min(xRight, this.width);
+
+            const foo = (jStart - xLeft);
+            let index = (this.width * i + jStart);
+            let r = rLeft + rInc * foo;
+            let g = gLeft + gInc * foo;
+            let b = bLeft + bInc * foo;
+
+            for (let j = jStart; j < jEnd; j++) {
+                this.pixels32[index++] = this.rgbToUint32(r, g, b);
+                r += rInc;
+                g += gInc;
+                b += bInc;
+            }
+
+            xLeft += slopeLeft;
+            xRight += slopeRight;
+            rLeft += rLeftInc;
+            gLeft += gLeftInc;
+            bLeft += bLeftInc;
+        }
     }
 
     circle(data) {
@@ -360,205 +527,6 @@ class GraphicsScreen {
     // PRIVATE //
     /////////////
 
-    createShapesProgram(gl) {
-        let vertShader = gl.createShader(gl.VERTEX_SHADER);
-        let vertCode = `
-            attribute vec2 coords;
-            attribute vec3 color;
-
-            varying vec3 vColor;
-
-            void main(void) {
-                gl_Position = vec4(coords, 0.0, 1.0);
-                gl_PointSize = 1.0;
-                vColor = color;
-            }`;
-        gl.shaderSource(vertShader, vertCode);
-        gl.compileShader(vertShader);
-
-        let fragShader = gl.createShader(gl.FRAGMENT_SHADER);
-        let fragCode = `
-            precision mediump float;
-
-            varying vec3 vColor;
-            
-            void main(void) {
-                gl_FragColor = vec4(vColor, 1.);
-            }`;
-        gl.shaderSource(fragShader, fragCode);
-        gl.compileShader(fragShader);
-
-        let program = gl.createProgram();
-        gl.attachShader(program, vertShader);
-        gl.attachShader(program, fragShader);
-        gl.linkProgram(program);
-        gl.useProgram(program);
-
-        program.coords = gl.getAttribLocation(program, 'coords');
-        gl.enableVertexAttribArray(program.coords);
-
-        program.color = gl.getAttribLocation(program, 'color');
-        gl.enableVertexAttribArray(program.color);
-
-        return program;
-    }
-
-    createTextProgram(gl) {
-        let vertShader = gl.createShader(gl.VERTEX_SHADER);
-        let vertCode = `
-            attribute vec2 coords;
-            attribute vec2 texCoords;
-
-            varying vec2 vTexCoords;
-
-            void main(void) {
-                gl_Position = vec4(coords, 0.0, 1.0);
-                vTexCoords = texCoords;
-            }`;
-        gl.shaderSource(vertShader, vertCode);
-        gl.compileShader(vertShader);
-
-        let fragShader = gl.createShader(gl.FRAGMENT_SHADER);
-        let fragCode = `
-            precision mediump float;
-
-            varying vec2 vTexCoords;
-
-            uniform sampler2D sampler;
-
-            void main(void) {
-                gl_FragColor = texture2D(sampler, vec2(vTexCoords.s, vTexCoords.t));
-            }`;
-        gl.shaderSource(fragShader, fragCode);
-        gl.compileShader(fragShader);
-
-        let program = gl.createProgram();
-        gl.attachShader(program, vertShader);
-        gl.attachShader(program, fragShader);
-        gl.linkProgram(program);
-        gl.useProgram(program);
-
-        program.coords = gl.getAttribLocation(program, 'coords');
-        gl.enableVertexAttribArray(program.coords);
-
-        program.texCoords = gl.getAttribLocation(program, 'texCoords');
-        gl.enableVertexAttribArray(program.texCoords);
-
-        program.sampler = gl.getUniformLocation(program, 'sampler');
-
-        this.textTexture = this.gl.createTexture();
-        this.gl.activeTexture(this.gl.TEXTURE0);
-        this.gl.bindTexture(this.gl.TEXTURE_2D, this.textTexture);
-
-        this.gl.pixelStorei(this.gl.UNPACK_FLIP_Y_WEBGL, true);
-
-        this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_MIN_FILTER, this.gl.NEAREST);
-
-        this.gl.uniform1i(program.sampler, 0);
-
-        return program;
-    }
-
-    createBufferSwapProgram(gl) {
-        let vertShader = gl.createShader(gl.VERTEX_SHADER);
-        let vertCode = `
-            attribute vec2 coords;
-            attribute vec2 texCoords;
-
-            varying vec2 vTexCoords;
-
-            void main(void) {
-                gl_Position = vec4(coords, 0.0, 1.0);
-                vTexCoords = texCoords;
-            }`;
-        gl.shaderSource(vertShader, vertCode);
-        gl.compileShader(vertShader);
-
-        let fragShader = gl.createShader(gl.FRAGMENT_SHADER);
-        let fragCode = `
-            precision mediump float;
-
-            varying vec2 vTexCoords;
-
-            uniform sampler2D sampler;
-
-            void main(void) {
-                gl_FragColor = texture2D(sampler, vec2(vTexCoords.s, vTexCoords.t));
-            }`;
-        gl.shaderSource(fragShader, fragCode);
-        gl.compileShader(fragShader);
-
-        let program = gl.createProgram();
-        gl.attachShader(program, vertShader);
-        gl.attachShader(program, fragShader);
-        gl.linkProgram(program);
-        gl.useProgram(program);
-
-        program.coords = gl.getAttribLocation(program, 'coords');
-        gl.enableVertexAttribArray(program.coords);
-
-        program.texCoords = gl.getAttribLocation(program, 'texCoords');
-        gl.enableVertexAttribArray(program.texCoords);
-
-        program.sampler = gl.getUniformLocation(program, 'sampler');
-
-        this.bufferSwapTexture = this.gl.createTexture();
-        this.gl.activeTexture(this.gl.TEXTURE1);
-        this.gl.bindTexture(this.gl.TEXTURE_2D, this.bufferSwapTexture);
-
-        this.gl.pixelStorei(this.gl.UNPACK_FLIP_Y_WEBGL, true);
-
-        this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_WRAP_S, this.gl.CLAMP_TO_EDGE);
-        this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_WRAP_T, this.gl.CLAMP_TO_EDGE); this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_MIN_FILTER, this.gl.NEAREST);
-
-        this.gl.uniform1i(program.sampler, 1);
-
-        return program;
-    }
-
-    useProgram(program) {
-        if (this.shaderProgram !== program) {
-            this.gl.useProgram(program);
-            this.shaderProgram = program;
-        }
-    }
-
-    useShapesProgram(coords, colors) {
-        this.useProgram(this.shapesProgram);
-
-        this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.shapesCoordsBuffer);
-        this.gl.vertexAttribPointer(this.shapesProgram.coords, 2, this.gl.FLOAT, false, 0, 0);
-        this.gl.bufferData(this.gl.ARRAY_BUFFER, new Float32Array(coords), this.gl.DYNAMIC_DRAW);
-
-        this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.shapesColorBuffer);
-        this.gl.vertexAttribPointer(this.shapesProgram.color, 3, this.gl.FLOAT, false, 0, 0);
-        this.gl.bufferData(this.gl.ARRAY_BUFFER, new Float32Array(colors), this.gl.DYNAMIC_DRAW);
-    }
-
-    useTextProgram(coords, texCoords) {
-        this.useProgram(this.textProgram);
-
-        this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.textCoordsBuffer);
-        this.gl.vertexAttribPointer(this.textProgram.coords, 2, this.gl.FLOAT, false, 0, 0);
-        this.gl.bufferData(this.gl.ARRAY_BUFFER, new Float32Array(coords), this.gl.DYNAMIC_DRAW);
-
-        this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.textTexCoordsBuffer);
-        this.gl.vertexAttribPointer(this.textProgram.texCoords, 2, this.gl.FLOAT, false, 0, 0);
-        this.gl.bufferData(this.gl.ARRAY_BUFFER, new Float32Array(texCoords), this.gl.DYNAMIC_DRAW);
-    }
-
-    useBufferSwapProgram(coords, texCoords) {
-        this.useProgram(this.bufferSwapProgram);
-
-        this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.bufferSwapCoordsBuffer);
-        this.gl.vertexAttribPointer(this.bufferSwapProgram.coords, 2, this.gl.FLOAT, false, 0, 0);
-        this.gl.bufferData(this.gl.ARRAY_BUFFER, new Float32Array(coords), this.gl.DYNAMIC_DRAW);
-
-        this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.bufferSwapTexCoordsBuffer);
-        this.gl.vertexAttribPointer(this.bufferSwapProgram.texCoords, 2, this.gl.FLOAT, false, 0, 0);
-        this.gl.bufferData(this.gl.ARRAY_BUFFER, new Float32Array(texCoords), this.gl.DYNAMIC_DRAW);
-    }
-
     // bufferState is drawbuf << 1 + dispbuf
     updateBufferState(bufferState) {
         // if the new buffer state is the same we don't have to do anything
@@ -593,22 +561,5 @@ class GraphicsScreen {
         this.frontBufferContext.putImageData(this.pixels, 0, 0);
         this.pixels = this.backBufferContext.getImageData(0, 0, this.width, this.height);
 
-
-        // this.tempBufferContext.drawImage(this.frontBufferContext.canvas, 0, 0);
-        // this.frontBufferContext.drawImage(this.gl.canvas, 0, 0);
-
-        // this.gl.activeTexture(this.gl.TEXTURE1);
-        // this.gl.bindTexture(this.gl.TEXTURE_2D, this.bufferSwapTexture);
-        // this.gl.texImage2D(this.gl.TEXTURE_2D, 0, this.gl.RGBA, this.gl.RGBA, this.gl.UNSIGNED_BYTE, this.tempBufferContext.canvas);
-        // // this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_MIN_FILTER, this.gl.NEAREST);
-
-        // this.gl.uniform1i(this.bufferSwapProgram.samplerUniform, 1);
-
-        // this.useBufferSwapProgram(
-        //     [-1, 1, 1, 1, -1, -1, 1, -1],
-        //     [0, 1, 1, 1, 0, 0, 1, 0],
-        // );
-
-        // this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4);
     }
 }
