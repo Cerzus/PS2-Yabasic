@@ -1,5 +1,6 @@
 open window 1,1
-for a=0 to 1000
+clear window
+for a=0 to 10000
 setrgb 1,ran(256),ran(256),ran(256)
 #setrgb 2,ran(256),ran(256),ran(256)
 #setrgb 3,ran(256),ran(256),ran(256)

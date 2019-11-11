@@ -46,6 +46,7 @@ class GraphicsScreen {
         this.textProgram = this.createTextProgram(this.gl);
         this.textCoordsBuffer = this.gl.createBuffer();
         this.textTexCoordsBuffer = this.gl.createBuffer();
+        // this.textColorBuffer = this.gl.createBuffer();
 
         this.bufferSwapProgram = this.createBufferSwapProgram(this.gl);
         this.bufferSwapCoordsBuffer = this.gl.createBuffer();
@@ -72,23 +73,15 @@ class GraphicsScreen {
         for (let i = 0; i < 16; i++) {
             if (i & 0x6) {
                 for (let j = 0; j < 16; j++) {
-                    context.fillText(String.fromCharCode(i * 16 + j), 10 * j, 16 * i);
+                    context.fillText(String.fromCharCode(i * 16 + j), 16 * j + 1, 16 * i);
                 }
             }
         }
 
         this.gl.activeTexture(this.gl.TEXTURE0);
         this.gl.bindTexture(this.gl.TEXTURE_2D, this.textTexture);
-        // let texture = this.gl.createTexture();
-
-        // this.gl.pixelStorei(this.gl.UNPACK_FLIP_Y_WEBGL, true);
-
-        // this.gl.bindTexture(this.gl.TEXTURE_2D, texture);
+        this.gl.pixelStorei(this.gl.UNPACK_FLIP_Y_WEBGL, false);
         this.gl.texImage2D(this.gl.TEXTURE_2D, 0, this.gl.RGBA, this.gl.RGBA, this.gl.UNSIGNED_BYTE, canvas);
-        // this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_MIN_FILTER, this.gl.NEAREST);
-
-        // this.gl.activeTexture(this.gl.TEXTURE0);
-        // this.gl.uniform1i(this.textProgram.samplerUniform, 0);
     }
 
     getDomElement() {
@@ -132,7 +125,7 @@ class GraphicsScreen {
         }
         let textHeight = 18 * text.length;
 
-        x = x + 1;
+        x = x + 0;
         if (alignment[0] === 'c') x -= Math.ceil(textWidth / 2) * 10;
         if (alignment[0] === 'r') x -= textWidth * 10;
         y = y + 7;
@@ -141,32 +134,46 @@ class GraphicsScreen {
 
         const x1 = (x - 320) / 320;
         const y1 = (256 - y) / 256;
-        // const x2 = x1 + canvas.width / 320;
-        // const y2 = y1 - canvas.height / 256;
 
         let pixelCoordinates = [];
         let textureCoordinates = [];
 
-        let foo = 0;
+        let numberOfVertices = 0;
         for (let i = 0; i < text.length; i++) {
             const line = text[i];
             for (let j = 0; j < line.length; j++) {
-                const px1 = x1 + j * 10 / 320;
-                const py1 = y1 - i * 18 / 256;
-                const px2 = px1 + 10 / 320;
-                const py2 = py1 - 18 / 256;
+                const ascii = line.charCodeAt(j);
+                const px1 = (x1 + j * 10 / 320);
+                const py1 = (y1 - i * 18 / 256);
+                const px2 = (px1 + 12 / 320) * 1;
+                const py2 = (py1 - 16 / 256) * 1;
+                const tx1 = (16 * (ascii & 0x0f)) / 256;
+                const ty1 = (ascii & 0xf0) / 256;
+                const tx2 = tx1 + 12 / 256;
+                const ty2 = ty1 + 16 / 256;
                 pixelCoordinates=pixelCoordinates.concat([px1, py1, px2, py1, px1, py2, px2, py1, px1, py2, px2, py2]);
-                textureCoordinates=textureCoordinates.concat([0, 1, 1, 1, 0, 0, 1, 1, 0, 0, 1, 0]);
-                foo+=6;
+                textureCoordinates=textureCoordinates.concat([tx1, ty1, tx2, ty1, tx1, ty2, tx2, ty1, tx1, ty2, tx2, ty2]);
+                numberOfVertices+=6;
             }
+        }
+
+        const r = color[0];
+        const g = color[1];
+        const b = color[2];
+        let colors = [];
+        for (let i = 0; i < numberOfVertices; i++) {
+            colors[i * 3 + 0] = r;
+            colors[i * 3 + 1] = g;
+            colors[i * 3 + 2] = b;
         }
 
         this.useTextProgram(
             pixelCoordinates,
             textureCoordinates,
+            colors,
         );
 
-        this.gl.drawArrays(this.gl.TRIANGLES, 0, foo);
+        this.gl.drawArrays(this.gl.TRIANGLES, 0, numberOfVertices);
     }
 
     dot(x, y, color) {
@@ -367,8 +374,10 @@ class GraphicsScreen {
         let vertCode = `
             attribute vec2 coords;
             attribute vec2 texCoords;
+            attribute vec3 color;
 
             varying vec2 vTexCoords;
+            varying vec3 vColor;
 
             void main(void) {
                 gl_Position = vec4(coords, 0.0, 1.0);
@@ -382,6 +391,7 @@ class GraphicsScreen {
             precision mediump float;
 
             varying vec2 vTexCoords;
+            varying vec3 vColor;
 
             uniform sampler2D sampler;
 
@@ -402,6 +412,9 @@ class GraphicsScreen {
 
         program.texCoords = gl.getAttribLocation(program, 'texCoords');
         gl.enableVertexAttribArray(program.texCoords);
+
+        // program.color = gl.getAttribLocation(program, 'color');
+        // gl.enableVertexAttribArray(program.color);
 
         program.sampler = gl.getUniformLocation(program, 'sampler');
 
@@ -494,7 +507,7 @@ class GraphicsScreen {
         this.gl.bufferData(this.gl.ARRAY_BUFFER, new Float32Array(colors), this.gl.DYNAMIC_DRAW);
     }
 
-    useTextProgram(coords, texCoords) {
+    useTextProgram(coords, texCoords, colors) {
         this.useProgram(this.textProgram);
 
         this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.textCoordsBuffer);
@@ -504,6 +517,10 @@ class GraphicsScreen {
         this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.textTexCoordsBuffer);
         this.gl.vertexAttribPointer(this.textProgram.texCoords, 2, this.gl.FLOAT, false, 0, 0);
         this.gl.bufferData(this.gl.ARRAY_BUFFER, new Float32Array(texCoords), this.gl.DYNAMIC_DRAW);
+
+        // this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.textColorBuffer);
+        // this.gl.vertexAttribPointer(this.textProgram.color, 3, this.gl.FLOAT, false, 0, 0);
+        // this.gl.bufferData(this.gl.ARRAY_BUFFER, new Float32Array(colors), this.gl.DYNAMIC_DRAW);
     }
 
     useBufferSwapProgram(coords, texCoords) {
