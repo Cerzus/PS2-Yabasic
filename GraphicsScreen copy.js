@@ -27,7 +27,6 @@ class GraphicsScreen {
         div.append(frontBuffer);
         this.domElement = div;
 
-
         this.gl = backBuffer.getContext('webgl', {
             antialias: false,
             preserveDrawingBuffer: true,
@@ -56,6 +55,40 @@ class GraphicsScreen {
 
         this.gl.enable(this.gl.BLEND);
         this.gl.blendFunc(this.gl.SRC_ALPHA, this.gl.ONE_MINUS_SRC_ALPHA);
+
+        this.createFontBitmap();
+    }
+
+    // TODO: fix characters
+    createFontBitmap() {
+        const canvas = document.createElement('canvas');
+        canvas.width = 256;
+        canvas.height = 256;
+        document.body.append(canvas);
+        const context = canvas.getContext('2d');
+        context.font = '16.6px Lucida Console';
+        context.textBaseline = 'top';
+        context.fillStyle = 'white';
+        for (let i = 0; i < 16; i++) {
+            if (i & 0x6) {
+                for (let j = 0; j < 16; j++) {
+                    context.fillText(String.fromCharCode(i * 16 + j), 10 * j, 16 * i);
+                }
+            }
+        }
+
+        this.gl.activeTexture(this.gl.TEXTURE0);
+        this.gl.bindTexture(this.gl.TEXTURE_2D, this.textTexture);
+        // let texture = this.gl.createTexture();
+
+        // this.gl.pixelStorei(this.gl.UNPACK_FLIP_Y_WEBGL, true);
+
+        // this.gl.bindTexture(this.gl.TEXTURE_2D, texture);
+        this.gl.texImage2D(this.gl.TEXTURE_2D, 0, this.gl.RGBA, this.gl.RGBA, this.gl.UNSIGNED_BYTE, canvas);
+        // this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_MIN_FILTER, this.gl.NEAREST);
+
+        // this.gl.activeTexture(this.gl.TEXTURE0);
+        // this.gl.uniform1i(this.textProgram.samplerUniform, 0);
     }
 
     getDomElement() {
@@ -93,47 +126,11 @@ class GraphicsScreen {
     }
 
     text(text, x, y, color, alignment) {
-        function getPowerOfTwo(value) {
-            let pow = 1;
-            while (pow < value) {
-                pow *= 2;
-            }
-            return pow;
-        }
-
-        let canvas = document.createElement('canvas');
-        let ctx = canvas.getContext('2d');
-
-        ctx.font = '16.6px Lucida Console';
-
         let textWidth = 0;
         for (let i = 0; i < text.length; i++) {
             textWidth = Math.max(textWidth, text[i].replace(/[^\S ]/g, '').length);
         }
         let textHeight = 18 * text.length;
-
-        canvas.width = getPowerOfTwo(textWidth * 10);
-        canvas.height = getPowerOfTwo(textHeight);
-        ctx.fillStyle = 'rgb(' + color[0] * 255 + ',' + color[1] * 255 + ',' + color[2] * 255 + ')';
-        ctx.textBaseline = 'top';
-        ctx.font = '16.6px Lucida Console';
-
-        for (let i = 0; i < text.length; i++) {
-            ctx.fillText(text[i], 0, 18 * i);
-        }
-
-        this.gl.activeTexture(this.gl.TEXTURE0);
-        this.gl.bindTexture(this.gl.TEXTURE_2D, this.textTexture);
-        // let texture = this.gl.createTexture();
-
-        // this.gl.pixelStorei(this.gl.UNPACK_FLIP_Y_WEBGL, true);
-
-        // this.gl.bindTexture(this.gl.TEXTURE_2D, texture);
-        this.gl.texImage2D(this.gl.TEXTURE_2D, 0, this.gl.RGBA, this.gl.RGBA, this.gl.UNSIGNED_BYTE, canvas);
-        // this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_MIN_FILTER, this.gl.NEAREST);
-
-        // this.gl.activeTexture(this.gl.TEXTURE0);
-        // this.gl.uniform1i(this.textProgram.samplerUniform, 0);
 
         x = x + 1;
         if (alignment[0] === 'c') x -= Math.ceil(textWidth / 2) * 10;
@@ -144,15 +141,32 @@ class GraphicsScreen {
 
         const x1 = (x - 320) / 320;
         const y1 = (256 - y) / 256;
-        const x2 = x1 + canvas.width / 320;
-        const y2 = y1 - canvas.height / 256;
+        // const x2 = x1 + canvas.width / 320;
+        // const y2 = y1 - canvas.height / 256;
+
+        let pixelCoordinates = [];
+        let textureCoordinates = [];
+
+        let foo = 0;
+        for (let i = 0; i < text.length; i++) {
+            const line = text[i];
+            for (let j = 0; j < line.length; j++) {
+                const px1 = x1 + j * 10 / 320;
+                const py1 = y1 - i * 18 / 256;
+                const px2 = px1 + 10 / 320;
+                const py2 = py1 - 18 / 256;
+                pixelCoordinates=pixelCoordinates.concat([px1, py1, px2, py1, px1, py2, px2, py1, px1, py2, px2, py2]);
+                textureCoordinates=textureCoordinates.concat([0, 1, 1, 1, 0, 0, 1, 1, 0, 0, 1, 0]);
+                foo+=6;
+            }
+        }
 
         this.useTextProgram(
-            [x1, y1, x2, y1, x1, y2, x2, y2],
-            [0, 1, 1, 1, 0, 0, 1, 0],
+            pixelCoordinates,
+            textureCoordinates,
         );
 
-        this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4);
+        this.gl.drawArrays(this.gl.TRIANGLES, 0, foo);
     }
 
     dot(x, y, color) {
