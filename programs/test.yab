@@ -1,8 +1,5 @@
 open window 1,1
-clear window
-for a=0 to 10000
+for a = 1 to 10000
 setrgb 1,ran(256),ran(256),ran(256)
-#setrgb 2,ran(256),ran(256),ran(256)
-#setrgb 3,ran(256),ran(256),ran(256)
-text ran(640),ran(512),"moi","cc"
+fill circle ran(640),ran(512),ran(50)
 next

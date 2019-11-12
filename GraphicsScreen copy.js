@@ -46,7 +46,7 @@ class GraphicsScreen {
         this.textProgram = this.createTextProgram(this.gl);
         this.textCoordsBuffer = this.gl.createBuffer();
         this.textTexCoordsBuffer = this.gl.createBuffer();
-        // this.textColorBuffer = this.gl.createBuffer();
+        this.textColorBuffer = this.gl.createBuffer();
 
         this.bufferSwapProgram = this.createBufferSwapProgram(this.gl);
         this.bufferSwapCoordsBuffer = this.gl.createBuffer();
@@ -56,32 +56,6 @@ class GraphicsScreen {
 
         this.gl.enable(this.gl.BLEND);
         this.gl.blendFunc(this.gl.SRC_ALPHA, this.gl.ONE_MINUS_SRC_ALPHA);
-
-        this.createFontBitmap();
-    }
-
-    // TODO: fix characters
-    createFontBitmap() {
-        const canvas = document.createElement('canvas');
-        canvas.width = 256;
-        canvas.height = 256;
-        document.body.append(canvas);
-        const context = canvas.getContext('2d');
-        context.font = '16.6px Lucida Console';
-        context.textBaseline = 'top';
-        context.fillStyle = 'white';
-        for (let i = 0; i < 16; i++) {
-            if (i & 0x6) {
-                for (let j = 0; j < 16; j++) {
-                    context.fillText(String.fromCharCode(i * 16 + j), 16 * j + 1, 16 * i);
-                }
-            }
-        }
-
-        this.gl.activeTexture(this.gl.TEXTURE0);
-        this.gl.bindTexture(this.gl.TEXTURE_2D, this.textTexture);
-        this.gl.pixelStorei(this.gl.UNPACK_FLIP_Y_WEBGL, false);
-        this.gl.texImage2D(this.gl.TEXTURE_2D, 0, this.gl.RGBA, this.gl.RGBA, this.gl.UNSIGNED_BYTE, canvas);
     }
 
     getDomElement() {
@@ -123,38 +97,53 @@ class GraphicsScreen {
         for (let i = 0; i < text.length; i++) {
             textWidth = Math.max(textWidth, text[i].replace(/[^\S ]/g, '').length);
         }
-        let textHeight = 18 * text.length;
 
-        x = x + 0;
         if (alignment[0] === 'c') x -= Math.ceil(textWidth / 2) * 10;
         if (alignment[0] === 'r') x -= textWidth * 10;
-        y = y + 7;
+        y = y + 6;
         if (alignment[1] === 'c') y -= Math.ceil(text.length / 2) * 18;
         if (alignment[1] === 'b') y -= text.length * 18;
 
-        const x1 = (x - 320) / 320;
-        const y1 = (256 - y) / 256;
+        const oneOver320 = 1 / 320;
+        const oneOver256 = 1 / 256;
+
+        const x1 = (x - 320) * oneOver320;
+        const y1 = (256 - y) * oneOver256;
 
         let pixelCoordinates = [];
         let textureCoordinates = [];
-
         let numberOfVertices = 0;
+
+        const pxInc = 10 * oneOver320;
+        const pyInc = -18 * oneOver256;
+
+        let py1 = y1;
+        let py2 = py1 - 16 * oneOver256;
+
         for (let i = 0; i < text.length; i++) {
             const line = text[i];
+
+            let px1 = x1;
+            let px2 = px1 + 12 * oneOver320;
+
             for (let j = 0; j < line.length; j++) {
                 const ascii = line.charCodeAt(j);
-                const px1 = (x1 + j * 10 / 320);
-                const py1 = (y1 - i * 18 / 256);
-                const px2 = (px1 + 12 / 320) * 1;
-                const py2 = (py1 - 16 / 256) * 1;
-                const tx1 = (16 * (ascii & 0x0f)) / 256;
-                const ty1 = (ascii & 0xf0) / 256;
-                const tx2 = tx1 + 12 / 256;
-                const ty2 = ty1 + 16 / 256;
-                pixelCoordinates=pixelCoordinates.concat([px1, py1, px2, py1, px1, py2, px2, py1, px1, py2, px2, py2]);
-                textureCoordinates=textureCoordinates.concat([tx1, ty1, tx2, ty1, tx1, ty2, tx2, ty1, tx1, ty2, tx2, ty2]);
-                numberOfVertices+=6;
+
+                const tx1 = (16 * (ascii & 0x0f)) * oneOver256;
+                const ty1 = (ascii & 0xf0) * oneOver256;
+                const tx2 = tx1 + 12 * oneOver256;
+                const ty2 = ty1 + 16 * oneOver256;
+
+                pixelCoordinates = pixelCoordinates.concat([px1, py1, px2, py1, px1, py2, px2, py1, px1, py2, px2, py2]);
+                textureCoordinates = textureCoordinates.concat([tx1, ty1, tx2, ty1, tx1, ty2, tx2, ty1, tx1, ty2, tx2, ty2]);
+
+                px1 += pxInc;
+                px2 += pxInc;
+                numberOfVertices += 6;
             }
+
+            py1 += pyInc;
+            py2 += pyInc;
         }
 
         const r = color[0];
@@ -173,7 +162,9 @@ class GraphicsScreen {
             colors,
         );
 
+        this.gl.enableVertexAttribArray(this.textProgram.texCoords);
         this.gl.drawArrays(this.gl.TRIANGLES, 0, numberOfVertices);
+        this.gl.disableVertexAttribArray(this.textProgram.texCoords);
     }
 
     dot(x, y, color) {
@@ -252,74 +243,63 @@ class GraphicsScreen {
         this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 3);
     }
 
-    circle(x, y, r, color, fill) {
-        let coords = [];
-        let colors = [];
+    circle(x, y, radius, color, fill) {
+        let xc = (x - 320 + 0.5) / 320;
+        let yc = (256 - y - 0.5) / 256;
 
-        let xc = (x - 320 + 0.0);
-        let yc = (256 - y - 0.0);
-        r = r - 0.5;
+        let x1 = xc;
+        let y1 = yc - radius / 256;
+        const angle = 2 * Math.PI / radius;
+
+        const r = color[0];
+        const g = color[1];
+        const b = color[2];
+
+        let coords = [];
+        const colors = [];
+
+        const scaledRadiusX = radius / 320;
+        const scaledRadiusY = radius / 256;
 
         if (fill) {
-            for (let y = - r; y < + r; y++) {
-                let x = Math.sqrt(r * r - y * y);
+            for (let i = 1; i <= radius; i++) {
+                let x2 = xc + Math.sin(i * angle) * scaledRadiusX;
+                let y2 = yc - Math.cos(i * angle) * scaledRadiusY;
 
-                let px1 = (xc - x) / 320;
-                let px2 = (xc + x) / 320;
-                let py = (yc + y) / 256;
-                coords = coords.concat([px1, py, px2, py]);
-                colors = colors.concat([...color, ...color]);
+                coords = coords.concat([x1, y1, x2, y2, xc, yc]);
+
+                x1 = x2;
+                y1 = y2;
             }
+
+            for (let i = 0, numberOfVertices = coords.length / 2; i < numberOfVertices; i++) {
+                colors[i * 3 + 0] = r;
+                colors[i * 3 + 1] = g;
+                colors[i * 3 + 2] = b;
+            }
+
+            this.useShapesProgram(coords, colors);
+            this.gl.drawArrays(this.gl.TRIANGLES, 0, coords.length / 2);
         } else {
-            let x = 0, y = r;
-            let d = 3 - 2 * r;
-            drawCircle(xc, yc, x, y);
-            while (y >= x) {
-                x++;
-                if (d >= 0) {
-                    y--;
-                    d = d + 4 * (x - y) + 10;
-                } else {
-                    d = d + 4 * x + 6;
-                }
-                drawCircle(xc, yc, x, y);
+            for (let i = 1; i <= radius; i++) {
+                let x2 = xc + Math.sin(i * angle) * scaledRadiusX;
+                let y2 = yc - Math.cos(i * angle) * scaledRadiusY;
+
+                coords = coords.concat([x1, y1, x2, y2]);
+
+                x1 = x2;
+                y1 = y2;
             }
 
-            function drawCircle(xc, yc, x, y) {
-                let xcpx = (xc + x) / 320;
-                let xcmx = (xc - x) / 320;
-                let xcpy = (xc + y) / 320;
-                let xcmy = (xc - y) / 320;
-                let ycpx = (yc + x) / 256;
-                let ycmx = (yc - x) / 256;
-                let ycpy = (yc + y) / 256;
-                let ycmy = (yc - y) / 256;
-                coords = coords.concat([xcpx, ycpy,
-                    xcmx, ycpy,
-                    xcpx, ycmy,
-                    xcmx, ycmy,
-                    xcpy, ycpx,
-                    xcmy, ycpx,
-                    xcpy, ycmx,
-                    xcmy, ycmx,
-                ]);
-
-                colors = colors.concat([
-                    ...color,
-                    ...color,
-                    ...color,
-                    ...color,
-                    ...color,
-                    ...color,
-                    ...color,
-                    ...color,
-                ]);
+            for (let i = 0, numberOfVertices = coords.length / 2; i < numberOfVertices; i++) {
+                colors[i * 3 + 0] = r;
+                colors[i * 3 + 1] = g;
+                colors[i * 3 + 2] = b;
             }
+
+            this.useShapesProgram(coords, colors);
+            this.gl.drawArrays(this.gl.LINES, 0, coords.length / 2);
         }
-
-        this.useShapesProgram(coords, colors);
-
-        this.gl.drawArrays(fill ? this.gl.LINES : this.gl.POINTS, 0, coords.length / 2);
     }
 
     /////////////
@@ -373,15 +353,16 @@ class GraphicsScreen {
         let vertShader = gl.createShader(gl.VERTEX_SHADER);
         let vertCode = `
             attribute vec2 coords;
-            attribute vec2 texCoords;
             attribute vec3 color;
+            attribute vec2 texCoords;
 
-            varying vec2 vTexCoords;
             varying vec3 vColor;
+            varying vec2 vTexCoords;
 
             void main(void) {
                 gl_Position = vec4(coords, 0.0, 1.0);
                 vTexCoords = texCoords;
+                vColor = color;
             }`;
         gl.shaderSource(vertShader, vertCode);
         gl.compileShader(vertShader);
@@ -390,13 +371,13 @@ class GraphicsScreen {
         let fragCode = `
             precision mediump float;
 
-            varying vec2 vTexCoords;
             varying vec3 vColor;
+            varying vec2 vTexCoords;
 
             uniform sampler2D sampler;
 
             void main(void) {
-                gl_FragColor = texture2D(sampler, vec2(vTexCoords.s, vTexCoords.t));
+                gl_FragColor = vec4(vColor, texture2D(sampler, vec2(vTexCoords.s, vTexCoords.t)).a);
             }`;
         gl.shaderSource(fragShader, fragCode);
         gl.compileShader(fragShader);
@@ -410,23 +391,36 @@ class GraphicsScreen {
         program.coords = gl.getAttribLocation(program, 'coords');
         gl.enableVertexAttribArray(program.coords);
 
-        program.texCoords = gl.getAttribLocation(program, 'texCoords');
-        gl.enableVertexAttribArray(program.texCoords);
+        program.color = gl.getAttribLocation(program, 'color');
+        gl.enableVertexAttribArray(program.color);
 
-        // program.color = gl.getAttribLocation(program, 'color');
-        // gl.enableVertexAttribArray(program.color);
+        program.texCoords = gl.getAttribLocation(program, 'texCoords');
 
         program.sampler = gl.getUniformLocation(program, 'sampler');
+
+        const canvas = document.createElement('canvas');
+        canvas.width = 256;
+        canvas.height = 256;
+
+        const context = canvas.getContext('2d');
+        context.font = '16px Lucida Console';
+        context.textBaseline = 'top';
+        context.fillStyle = 'white';
+
+        for (let i = 0; i < 16; i++) {
+            if (i & 0x6) {
+                for (let j = 0; j < 16; j++) {
+                    context.fillText(String.fromCharCode(i * 16 + j), 16 * j + 1, 16 * i);
+                }
+            }
+        }
 
         this.textTexture = this.gl.createTexture();
         this.gl.activeTexture(this.gl.TEXTURE0);
         this.gl.bindTexture(this.gl.TEXTURE_2D, this.textTexture);
-
-        this.gl.pixelStorei(this.gl.UNPACK_FLIP_Y_WEBGL, true);
-
         this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_MIN_FILTER, this.gl.NEAREST);
-
-        this.gl.uniform1i(program.sampler, 0);
+        this.gl.pixelStorei(this.gl.UNPACK_FLIP_Y_WEBGL, false);
+        this.gl.texImage2D(this.gl.TEXTURE_2D, 0, this.gl.ALPHA, this.gl.ALPHA, this.gl.UNSIGNED_BYTE, canvas);
 
         return program;
     }
@@ -514,13 +508,13 @@ class GraphicsScreen {
         this.gl.vertexAttribPointer(this.textProgram.coords, 2, this.gl.FLOAT, false, 0, 0);
         this.gl.bufferData(this.gl.ARRAY_BUFFER, new Float32Array(coords), this.gl.DYNAMIC_DRAW);
 
+        this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.textColorBuffer);
+        this.gl.vertexAttribPointer(this.textProgram.color, 3, this.gl.FLOAT, false, 0, 0);
+        this.gl.bufferData(this.gl.ARRAY_BUFFER, new Float32Array(colors), this.gl.DYNAMIC_DRAW);
+
         this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.textTexCoordsBuffer);
         this.gl.vertexAttribPointer(this.textProgram.texCoords, 2, this.gl.FLOAT, false, 0, 0);
         this.gl.bufferData(this.gl.ARRAY_BUFFER, new Float32Array(texCoords), this.gl.DYNAMIC_DRAW);
-
-        // this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.textColorBuffer);
-        // this.gl.vertexAttribPointer(this.textProgram.color, 3, this.gl.FLOAT, false, 0, 0);
-        // this.gl.bufferData(this.gl.ARRAY_BUFFER, new Float32Array(colors), this.gl.DYNAMIC_DRAW);
     }
 
     useBufferSwapProgram(coords, texCoords) {

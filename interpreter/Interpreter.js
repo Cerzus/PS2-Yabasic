@@ -10,7 +10,7 @@ class Interpreter {
     constructor() {
         this.version = 2.66;
         this.fps = 50;
-        this.cpuUsage = 0.2;
+        this.cpuUsage = 1;
         this.maxInstructionsPerFrame = 140000000;
         this.resolution = {
             width: 640,
