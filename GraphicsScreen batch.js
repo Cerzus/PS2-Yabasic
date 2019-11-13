@@ -104,6 +104,7 @@ class GraphicsScreen {
         if (numberOfCoordinates > 0) {
             this.useShapesProgram(this.coords, this.colors, this.texCoords);
             this.gl.drawArrays(this.gl.TRIANGLES, 0, numberOfCoordinates);
+
             this.coords = [];
             this.colors = [];
             this.texCoords = [];
@@ -117,6 +118,10 @@ class GraphicsScreen {
     clearWindow(r, g, b) {
         this.gl.clearColor(r, g, b, 1);
         this.gl.clear(this.gl.COLOR_BUFFER_BIT);
+
+        this.coords = [];
+        this.colors = [];
+        this.texCoords = [];
     }
 
     setDrawBuf(buffer) {
