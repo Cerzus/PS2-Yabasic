@@ -1,5 +1,16 @@
 open window 1,1
 for a = 1 to 10000
 setrgb 1,ran(256),ran(256),ran(256)
-fill circle ran(640),ran(512),ran(50)
+setrgb 2,ran(256),ran(256),ran(256)
+setrgb 3,ran(256),ran(256),ran(256)
+#fill circle ran(640),ran(512),ran(100)
+fill rect ran(640),ran(512),ran(640),ran(512)
+fill triangle ran(640),ran(512) to ran(640),ran(512) to ran(640),ran(512)
+gtriangle ran(640),ran(512) to ran(640),ran(512) to ran(640),ran(512)
+#circle ran(640),ran(512),ran(100)
+rect ran(640),ran(512),ran(640),ran(512)
+triangle ran(640),ran(512) to ran(640),ran(512) to ran(640),ran(512)
+text ran(640),ran(512), "Halloween\nis\nfun!","cc"
+line ran(640),ran(512),ran(640),ran(512)
+dot ran(640),ran(512)
 next
