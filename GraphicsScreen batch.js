@@ -5,80 +5,28 @@ class GraphicsScreen {
         this.width = width;
         this.height = height;
 
-        // graphics back buffer
-        var canvas = document.createElement('canvas');
-        canvas.width = this.width;
-        canvas.height = this.height;
-        const backBuffer = canvas;
+        const buffer1Canvas = document.createElement('canvas');
+        buffer1Canvas.width = this.width;
+        buffer1Canvas.height = this.height;
 
-        // graphics front buffer
-        var canvas = document.createElement('canvas');
-        canvas.style.position = 'absolute';
-        canvas.style.top = 0;
-        canvas.style.left = 0;
-        canvas.width = this.width;
-        canvas.height = this.height;
-        const frontBuffer = canvas;
+        this. buffer0Canvas = document.createElement('canvas');
+        this.buffer0Canvas.style.position = 'absolute';
+        this.buffer0Canvas.style.top = 0;
+        this.buffer0Canvas.style.left = 0;
+        this.buffer0Canvas.width = this.width;
+        this.buffer0Canvas.height = this.height;
 
-        // dom element
-        const div = document.createElement('div');
-        div.style.position = 'relative';
-        div.append(backBuffer);
-        div.append(frontBuffer);
-        this.domElement = div;
+        this.domElement = document.createElement('div');
+        this.domElement.style.position = 'relative';
+        this.domElement.append(buffer1Canvas);
+        this.domElement.append(this.buffer0Canvas);
 
-        this.gl = backBuffer.getContext('webgl', {
-            antialias: false,
-            preserveDrawingBuffer: true,
-        });
-
-        this.frontBufferContext = frontBuffer.getContext('2d');
-
-        const tempBuffer = document.createElement('canvas');
-        tempBuffer.width = this.width;
-        tempBuffer.height = this.height;
-        this.tempBufferContext = tempBuffer.getContext('2d');
-
-        this.shapesProgram = this.createShapesProgram(this.gl);
-        this.shapesCoordsBuffer = this.gl.createBuffer();
-        this.shapesColorBuffer = this.gl.createBuffer();
-        this.shapesTexCoordsBuffer = this.gl.createBuffer();
-        this.shapesUseTextureBuffer = this.gl.createBuffer();
-
-        this.bufferSwapProgram = this.createBufferSwapProgram(this.gl);
-        this.bufferSwapCoordsBuffer = this.gl.createBuffer();
-        this.bufferSwapTexCoordsBuffer = this.gl.createBuffer();
-
-        this.gl.viewport(0, 0, this.width, this.height);
-
-        this.gl.enable(this.gl.BLEND);
-        this.gl.blendFunc(this.gl.SRC_ALPHA, this.gl.ONE_MINUS_SRC_ALPHA);
+        this.buffers = [
+            this.createBuffer(this.buffer0Canvas),
+            this.createBuffer(buffer1Canvas),
+        ];
 
         this.maxCoordsBeforeSend = 5000;
-
-        var canvas = document.createElement('canvas');
-        canvas.width = 256;
-        canvas.height = 256;
-
-        var context = canvas.getContext('2d');
-        context.font = '16px Lucida Console';
-        context.textBaseline = 'top';
-        context.fillStyle = 'white';
-
-        for (let i = 0; i < 16; i++) {
-            if (i & 0x6) {
-                for (let j = 0; j < 16; j++) {
-                    context.fillText(String.fromCharCode(i * 16 + j), 16 * j + 1, 16 * i);
-                }
-            }
-        }
-
-        this.textTexture = this.gl.createTexture();
-        this.gl.activeTexture(this.gl.TEXTURE0);
-        this.gl.bindTexture(this.gl.TEXTURE_2D, this.textTexture);
-        this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_MIN_FILTER, this.gl.NEAREST);
-        this.gl.pixelStorei(this.gl.UNPACK_FLIP_Y_WEBGL, false);
-        this.gl.texImage2D(this.gl.TEXTURE_2D, 0, this.gl.ALPHA, this.gl.ALPHA, this.gl.UNSIGNED_BYTE, canvas);
     }
 
     getDomElement() {
@@ -86,29 +34,19 @@ class GraphicsScreen {
     }
 
     reset(r, g, b) {
-        this.frontBufferContext.canvas.style.display = 'none';
-        this.frontBufferContext.fillStyle = 'rgb(' + r * 255 + ',' + g * 255 + ',' + b * 255 + ')';
-        this.frontBufferContext.fillRect(0, 0, this.width, this.height);
-        this.bufferState = 0;
-        this.gl.clearColor(r, g, b, 1);
-        this.gl.clear(this.gl.COLOR_BUFFER_BIT);
+        this.drawBuf = 0;
+        this.dispBuf = 0;
+
+        for (let buffer of this.buffers) {
+            buffer.clearColor(r, g, b, 1);
+            buffer.clear(buffer.COLOR_BUFFER_BIT);
+        }
+
+        this.gl = this.buffers[this.drawBuf];
 
         this.coords = [];
         this.colors = [];
         this.texCoords = [];
-    }
-
-    sendToGraphicsCard() {
-        const numberOfCoordinates = this.coords.length / 2;
-
-        if (numberOfCoordinates > 0) {
-            this.useShapesProgram(this.coords, this.colors, this.texCoords);
-            this.gl.drawArrays(this.gl.TRIANGLES, 0, numberOfCoordinates);
-
-            this.coords = [];
-            this.colors = [];
-            this.texCoords = [];
-        }
     }
 
     update() {
@@ -125,15 +63,18 @@ class GraphicsScreen {
     }
 
     setDrawBuf(buffer) {
-        this.updateBufferState(
-            !!buffer ? (this.bufferState | 2) : (this.bufferState & 1)
-        );
+        if (buffer !== this.drawBuf) {
+            this.sendToGraphicsCard();
+            this.gl = this.buffers[buffer];
+            this.drawBuf = buffer;
+        }
     }
 
     setDispBuf(buffer) {
-        this.updateBufferState(
-            !!buffer ? (this.bufferState | 1) : (this.bufferState & 2)
-        );
+        if (buffer !== this.dispBuf) {
+            this.buffer0Canvas.style.top = buffer ? 10000 : 0;
+            this.dispBuf = buffer;
+        }
     }
 
     circle(x, y, radius, color, fill) {
@@ -625,9 +566,75 @@ class GraphicsScreen {
     // PRIVATE //
     /////////////
 
-    createShapesProgram(gl) {
-        let vertShader = gl.createShader(gl.VERTEX_SHADER);
-        let vertCode = `
+    sendToGraphicsCard() {
+        const numberOfCoordinates = this.coords.length / 2;
+
+        if (numberOfCoordinates > 0) {
+            this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.gl.coordsBuffer);
+            this.gl.bufferData(this.gl.ARRAY_BUFFER, new Float32Array(this.coords), this.gl.DYNAMIC_DRAW);
+
+            this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.gl.colorBuffer);
+            this.gl.bufferData(this.gl.ARRAY_BUFFER, new Float32Array(this.colors), this.gl.DYNAMIC_DRAW);
+
+            this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.gl.texCoordsBuffer);
+            this.gl.bufferData(this.gl.ARRAY_BUFFER, new Float32Array(this.texCoords), this.gl.DYNAMIC_DRAW);
+
+            this.gl.drawArrays(this.gl.TRIANGLES, 0, numberOfCoordinates);
+
+            this.coords = [];
+            this.colors = [];
+            this.texCoords = [];
+        }
+    }
+
+    createBuffer(canvas) {
+        const gl = canvas.getContext('webgl', {
+            antialias: false,
+            preserveDrawingBuffer: true,
+        });
+
+        gl.viewport(0, 0, this.width, this.height);
+
+        gl.enable(gl.BLEND);
+        gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+
+        gl.textTexture = this.createTextTexture(gl);
+        gl.program = this.createProgram(gl);
+
+        return gl;
+    }
+
+    createTextTexture(gl) {
+        const canvas = document.createElement('canvas');
+        canvas.width = 256;
+        canvas.height = 256;
+
+        const context = canvas.getContext('2d');
+        context.font = '16px Lucida Console';
+        context.textBaseline = 'top';
+        context.fillStyle = 'white';
+
+        for (let i = 0; i < 16; i++) {
+            if (i & 0x6) {
+                for (let j = 0; j < 16; j++) {
+                    context.fillText(String.fromCharCode(i * 16 + j), 16 * j + 1, 16 * i);
+                }
+            }
+        }
+
+        const texture = gl.createTexture();
+        gl.activeTexture(gl.TEXTURE0);
+        gl.bindTexture(gl.TEXTURE_2D, texture);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+        gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.ALPHA, gl.ALPHA, gl.UNSIGNED_BYTE, canvas);
+
+        return texture;
+    }
+
+    createProgram(gl) {
+        const vertShader = gl.createShader(gl.VERTEX_SHADER);
+        const vertCode = `
             attribute vec2 coords;
             attribute vec3 color;
             attribute vec2 texCoords;
@@ -643,8 +650,8 @@ class GraphicsScreen {
         gl.shaderSource(vertShader, vertCode);
         gl.compileShader(vertShader);
 
-        let fragShader = gl.createShader(gl.FRAGMENT_SHADER);
-        let fragCode = `
+        const fragShader = gl.createShader(gl.FRAGMENT_SHADER);
+        const fragCode = `
             precision mediump float;
 
             varying vec3 vColor;
@@ -662,162 +669,30 @@ class GraphicsScreen {
         gl.shaderSource(fragShader, fragCode);
         gl.compileShader(fragShader);
 
-        let program = gl.createProgram();
+        const program = gl.createProgram();
         gl.attachShader(program, vertShader);
         gl.attachShader(program, fragShader);
         gl.linkProgram(program);
         gl.useProgram(program);
 
-        program.coords = gl.getAttribLocation(program, 'coords');
-        gl.enableVertexAttribArray(program.coords);
-
-        program.color = gl.getAttribLocation(program, 'color');
-        gl.enableVertexAttribArray(program.color);
-
-        program.texCoords = gl.getAttribLocation(program, 'texCoords');
-        gl.enableVertexAttribArray(program.texCoords);
-
-        return program;
-    }
-
-    createBufferSwapProgram(gl) {
-        let vertShader = gl.createShader(gl.VERTEX_SHADER);
-        let vertCode = `
-            attribute vec2 coords;
-            attribute vec2 texCoords;
-
-            varying vec2 vTexCoords;
-
-            void main(void) {
-                gl_Position = vec4(coords, 0.0, 1.0);
-                vTexCoords = texCoords;
-            }`;
-        gl.shaderSource(vertShader, vertCode);
-        gl.compileShader(vertShader);
-
-        let fragShader = gl.createShader(gl.FRAGMENT_SHADER);
-        let fragCode = `
-            precision mediump float;
-
-            varying vec2 vTexCoords;
-
-            uniform sampler2D sampler;
-
-            void main(void) {
-                gl_FragColor = texture2D(sampler, vec2(vTexCoords.s, vTexCoords.t));
-            }`;
-        gl.shaderSource(fragShader, fragCode);
-        gl.compileShader(fragShader);
-
-        let program = gl.createProgram();
-        gl.attachShader(program, vertShader);
-        gl.attachShader(program, fragShader);
-        gl.linkProgram(program);
-        gl.useProgram(program);
-
-        program.coords = gl.getAttribLocation(program, 'coords');
-        gl.enableVertexAttribArray(program.coords);
-
-        program.texCoords = gl.getAttribLocation(program, 'texCoords');
-        gl.enableVertexAttribArray(program.texCoords);
-
-        program.sampler = gl.getUniformLocation(program, 'sampler');
-
-        this.bufferSwapTexture = this.gl.createTexture();
-        this.gl.activeTexture(this.gl.TEXTURE1);
-        this.gl.bindTexture(this.gl.TEXTURE_2D, this.bufferSwapTexture);
-
-        this.gl.pixelStorei(this.gl.UNPACK_FLIP_Y_WEBGL, true);
-
-        this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_WRAP_S, this.gl.CLAMP_TO_EDGE);
-        this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_WRAP_T, this.gl.CLAMP_TO_EDGE); this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_MIN_FILTER, this.gl.NEAREST);
-
-        this.gl.uniform1i(program.sampler, 1);
+        gl.coords = gl.getAttribLocation(program, 'coords');
+        gl.enableVertexAttribArray(gl.coords);
+        gl.coordsBuffer = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, gl.coordsBuffer);
+        gl.vertexAttribPointer(gl.coords, 2, gl.FLOAT, false, 0, 0);
+        
+        gl.color = gl.getAttribLocation(program, 'color');
+        gl.enableVertexAttribArray(gl.color);
+        gl.colorBuffer = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, gl.colorBuffer);
+        gl.vertexAttribPointer(gl.color, 3, gl.FLOAT, false, 0, 0);
+        
+        gl.texCoords = gl.getAttribLocation(program, 'texCoords');
+        gl.enableVertexAttribArray(gl.texCoords);
+        gl.texCoordsBuffer = gl.createBuffer();
+        gl.bindBuffer(gl.ARRAY_BUFFER, gl.texCoordsBuffer);
+        gl.vertexAttribPointer(gl.texCoords, 2, gl.FLOAT, false, 0, 0);
 
         return program;
-    }
-
-    useProgram(program) {
-        if (this.shaderProgram !== program) {
-            this.gl.useProgram(program);
-            this.shaderProgram = program;
-        }
-    }
-
-    useShapesProgram(coords, colors, texCoords) {
-        this.useProgram(this.shapesProgram);
-
-        this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.shapesCoordsBuffer);
-        this.gl.vertexAttribPointer(this.shapesProgram.coords, 2, this.gl.FLOAT, false, 0, 0);
-        this.gl.bufferData(this.gl.ARRAY_BUFFER, new Float32Array(coords), this.gl.DYNAMIC_DRAW);
-
-        this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.shapesColorBuffer);
-        this.gl.vertexAttribPointer(this.shapesProgram.color, 3, this.gl.FLOAT, false, 0, 0);
-        this.gl.bufferData(this.gl.ARRAY_BUFFER, new Float32Array(colors), this.gl.DYNAMIC_DRAW);
-
-        this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.shapesTexCoordsBuffer);
-        this.gl.vertexAttribPointer(this.shapesProgram.texCoords, 2, this.gl.FLOAT, false, 0, 0);
-        this.gl.bufferData(this.gl.ARRAY_BUFFER, new Float32Array(texCoords), this.gl.DYNAMIC_DRAW);
-    }
-
-    useBufferSwapProgram(coords, texCoords) {
-        this.useProgram(this.bufferSwapProgram);
-
-        this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.bufferSwapCoordsBuffer);
-        this.gl.vertexAttribPointer(this.bufferSwapProgram.coords, 2, this.gl.FLOAT, false, 0, 0);
-        this.gl.bufferData(this.gl.ARRAY_BUFFER, new Float32Array(coords), this.gl.DYNAMIC_DRAW);
-
-        this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.bufferSwapTexCoordsBuffer);
-        this.gl.vertexAttribPointer(this.bufferSwapProgram.texCoords, 2, this.gl.FLOAT, false, 0, 0);
-        this.gl.bufferData(this.gl.ARRAY_BUFFER, new Float32Array(texCoords), this.gl.DYNAMIC_DRAW);
-    }
-
-    // bufferState is drawbuf << 1 + dispbuf
-    updateBufferState(bufferState) {
-        // if the new buffer state is the same we don't have to do anything
-        if (bufferState === this.bufferState) {
-            return;
-        }
-
-        // the state starts where drawbuf and dispbuf are the same
-        if (this.bufferState === 0b00 || this.bufferState === 0b11) {
-            // if drawbuf is changed
-            if ((this.bufferState ^ bufferState) === 0b10) {
-                this.swapFrontAndBackBuffers();
-            }
-
-            this.frontBufferContext.canvas.style.display = 'initial';
-        }
-        // the state starts where drawbuf and dispbuf are different
-        else if (this.bufferState === 0b01 || this.bufferState === 0b10) {
-            this.frontBufferContext.canvas.style.display = 'none';
-
-            // if drawbuf is changed
-            if ((this.bufferState ^ bufferState) === 0b10) {
-                this.swapFrontAndBackBuffers();
-            }
-        }
-
-        this.bufferState = bufferState;
-    }
-
-    swapFrontAndBackBuffers() {
-        this.update();
-        this.tempBufferContext.drawImage(this.frontBufferContext.canvas, 0, 0);
-        this.frontBufferContext.drawImage(this.gl.canvas, 0, 0);
-
-        this.gl.activeTexture(this.gl.TEXTURE1);
-        this.gl.bindTexture(this.gl.TEXTURE_2D, this.bufferSwapTexture);
-        this.gl.texImage2D(this.gl.TEXTURE_2D, 0, this.gl.RGBA, this.gl.RGBA, this.gl.UNSIGNED_BYTE, this.tempBufferContext.canvas);
-        // this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_MIN_FILTER, this.gl.NEAREST);
-
-        this.gl.uniform1i(this.bufferSwapProgram.samplerUniform, 1);
-
-        this.useBufferSwapProgram(
-            [-1, 1, 1, 1, -1, -1, 1, -1],
-            [0, 1, 1, 1, 0, 0, 1, 0],
-        );
-
-        this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4);
     }
 }

@@ -2,7 +2,7 @@
 
 window.onload = function () {
     const grammarFile = 'data/yabasic.js';
-    const programFile = 'programs/test.yab';
+    const programFile = 'programs/ball.yab';
 
     const interpreter = new Interpreter();
     document.body.appendChild(interpreter.getDomElement());
