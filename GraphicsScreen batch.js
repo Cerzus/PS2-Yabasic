@@ -72,7 +72,7 @@ class GraphicsScreen {
 
     setDispBuf(buffer) {
         if (buffer !== this.dispBuf) {
-            this.buffer0Canvas.style.top = buffer ? 10000 : 0;
+            this.buffer0Canvas.style.visibility = buffer ? 'hidden':'visible';
             this.dispBuf = buffer;
         }
     }
