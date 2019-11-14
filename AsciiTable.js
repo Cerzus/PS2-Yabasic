@@ -32,7 +32,7 @@ class AsciiTable {
             }
         }
 
-        this.graphicsScreenCharacters = this.asciiTable.slice();
+        this.graphicsScreenCharacters = [];
         var singleCharacters = [
             11, 12, 160, 161, 162,
             165, 172, 173, 175, 177,
