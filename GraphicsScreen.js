@@ -10,10 +10,7 @@ class GraphicsScreen {
         this.canvas.height = this.height;
         this.context = this.canvas.getContext('2d');
 
-        this.buffers = [
-            this.createBuffer(),
-            this.createBuffer(),
-        ];
+        this.buffers = [this.createBuffer(), this.createBuffer()];
 
         this.maxCoordsBeforeSend = 5000;
     }
@@ -31,8 +28,6 @@ class GraphicsScreen {
             buffer.gl.clear(buffer.gl.COLOR_BUFFER_BIT);
         }
 
-        this.buffer = this.buffers[this.drawBuf];
-
         this.coords = [];
         this.colors = [];
         this.texCoords = [];
@@ -40,12 +35,15 @@ class GraphicsScreen {
 
     update() {
         this.sendToGraphicsCard();
+
+        this.context.clearRect(0, 0, this.width, this.height); // necessary to clear alpha
         this.context.drawImage(this.buffers[this.dispBuf].canvas, 0, 0);
     }
 
     clearWindow(r, g, b) {
-        this.buffer.gl.clearColor(r, g, b, 1);
-        this.buffer.gl.clear(this.buffer.gl.COLOR_BUFFER_BIT);
+        const gl = this.buffers[this.drawBuf].gl;
+        gl.clearColor(r, g, b, 1);
+        gl.clear(gl.COLOR_BUFFER_BIT);
 
         this.coords = [];
         this.colors = [];
@@ -55,33 +53,31 @@ class GraphicsScreen {
     setDrawBuf(buffer) {
         if (buffer !== this.drawBuf) {
             this.sendToGraphicsCard();
-            this.buffer = this.buffers[buffer];
+
             this.drawBuf = buffer;
         }
     }
 
     setDispBuf(buffer) {
-        if (buffer !== this.dispBuf) {
-            this.dispBuf = buffer;
-        }
+        this.dispBuf = buffer;
     }
 
     circle(x, y, radius, color, fill) {
         const angle = 2 * Math.PI / radius;
 
         if (fill) {
-            const xc = (x - 320 + 0.5) / 320;
-            const yc = (256 - y - 0.5) / 256;
+            const xc = (x - 320 + 0.498) / 320;
+            const yc = (256 - y - 0.498) / 256;
+
+            const scaledRadiusX = radius / 320;
+            const scaledRadiusY = radius / 256;
 
             let x1 = xc;
-            let y1 = yc - radius / 256;
+            let y1 = yc - scaledRadiusY;
 
             const r = color[0];
             const g = color[1];
             const b = color[2];
-
-            const scaledRadiusX = radius / 320;
-            const scaledRadiusY = radius / 256;
 
             let colorsIndex = this.colors.length;
             let coordsIndex = this.coords.length;
@@ -559,15 +555,16 @@ class GraphicsScreen {
         const numberOfCoordinates = this.coords.length / 2;
 
         if (numberOfCoordinates > 0) {
-            const gl = this.buffer.gl;
+            const buffer = this.buffers[this.drawBuf];
+            const gl = buffer.gl;
 
-            gl.bindBuffer(gl.ARRAY_BUFFER, this.buffer.coordsBuffer);
+            gl.bindBuffer(gl.ARRAY_BUFFER, buffer.coordsBuffer);
             gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(this.coords), gl.DYNAMIC_DRAW);
 
-            gl.bindBuffer(gl.ARRAY_BUFFER, this.buffer.colorBuffer);
+            gl.bindBuffer(gl.ARRAY_BUFFER, buffer.colorBuffer);
             gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(this.colors), gl.DYNAMIC_DRAW);
 
-            gl.bindBuffer(gl.ARRAY_BUFFER, this.buffer.texCoordsBuffer);
+            gl.bindBuffer(gl.ARRAY_BUFFER, buffer.texCoordsBuffer);
             gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(this.texCoords), gl.DYNAMIC_DRAW);
 
             gl.drawArrays(gl.TRIANGLES, 0, numberOfCoordinates);
