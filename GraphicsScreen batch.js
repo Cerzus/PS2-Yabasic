@@ -40,7 +40,7 @@ class GraphicsScreen {
 
     update() {
         this.sendToGraphicsCard();
-        this.context.drawImage(this.buffers[this.drawBuf].canvas, 0, 0);
+        this.context.drawImage(this.buffers[this.dispBuf].canvas, 0, 0);
     }
 
     clearWindow(r, g, b) {
