@@ -4,7 +4,27 @@
 // UTILITY FUNCTIONS //
 ///////////////////////
 
-Interpreter.prototype.popArrayIndex = function (id, numDimensions) {
+Interpreter.prototype.loadArray = function (id, numArguments) {
+    const array = this.symbolStack.getArray(id);
+
+    if (array === undefined || array.address !== undefined) {
+        this.throwError('IsNeitherArrayNorSubroutine', this.symbolStack.getArrayName(id));
+    }
+
+    if (numArguments === 0) {
+        this.instructionLOAD_ARRAY_REFERENCE(id);
+    } else {
+        const index = this.popArrayIndex(id, numArguments, array);
+
+        if (this.symbolStack.getArrayType(id) === 'String') {
+            this.pushString(array.values[index]);
+        } else {
+            this.pushNumber(array.values[index]);
+        }
+    }
+};
+
+Interpreter.prototype.popArrayIndex = function (id, numDimensions, array) {
     if (numDimensions === 0) {
         const expected = this.strings.get('Nothing');
         const found = this.strings.get('A' + this.symbolStack.getArrayType(id));
@@ -13,32 +33,39 @@ Interpreter.prototype.popArrayIndex = function (id, numDimensions) {
 
     const dimensions = this.getArrayDimensions(numDimensions);
 
-    const array = this.symbolStack.getArray(id);
+    const arrayDimensions = array.dimensions;
 
-    if (array.dimensions.length === 0) {
+    if (arrayDimensions.length === 0) {
         this.throwError('ArrayParameterHasNotBeenSupplied', this.symbolStack.getArrayName(id));
     }
 
-    if (numDimensions !== array.dimensions.length) {
-        this.throwError('IndicesSuppliedExpectedFor', numDimensions, array.dimensions.length, this.symbolStack.getArrayName(id));
+    if (numDimensions !== arrayDimensions.length) {
+        this.throwError('IndicesSuppliedExpectedFor', numDimensions, arrayDimensions.length, this.symbolStack.getArrayName(id));
     }
 
-    for (let i = 0; i < dimensions.length; i++) {
+    for (let i = 0; i < numDimensions; i++) {
         const dimension = dimensions[i];
 
-        if (dimension < 0 || dimension >= array.dimensions[i]) {
+        if (dimension < 0 || dimension >= arrayDimensions[i]) {
             this.throwError('IndexOutOfRange', i + 1, dimension);
         }
     }
 
-    let index = 0;
-    let factor = 1;
-    for (let i = dimensions.length - 1; i >= 0; i--) {
-        index += dimensions[i] * factor;
-        factor *= array.dimensions[i];
-    }
+    switch (numDimensions) {
+        case 1:
+            return dimensions[0];
+        case 2:
+            return arrayDimensions[1] * dimensions[0] + dimensions[1];
+        default:
+            let index = 0;
+            let factor = 1;
+            for (let i = numDimensions - 1; i >= 0; i--) {
+                index += dimensions[i] * factor;
+                factor *= arrayDimensions[i];
+            }
 
-    return index;
+            return index;
+    }
 };
 
 Interpreter.prototype.getArrayDimensions = function (numDimensions) {
@@ -71,29 +98,9 @@ Interpreter.prototype.instructionSTORE_ARRAY_ELEMENT = function (id, numArgument
     }
 
     const value = this.popStringOrNumber();
-    const index = this.popArrayIndex(id, numArguments);
+    const index = this.popArrayIndex(id, numArguments, array);
 
     array.values[index] = value;
-};
-
-Interpreter.prototype.loadArray = function (id, numArguments) {
-    const array = this.symbolStack.getArray(id);
-
-    if (array === undefined || array.address !== undefined) {
-        this.throwError('IsNeitherArrayNorSubroutine', this.symbolStack.getArrayName(id));
-    }
-
-    if (numArguments === 0) {
-        this.instructionLOAD_ARRAY_REFERENCE(id);
-    } else {
-        const index = this.popArrayIndex(id, numArguments);
-
-        if (this.symbolStack.getArrayType(id) === 'String') {
-            this.pushString(array.values[index]);
-        } else {
-            this.pushNumber(array.values[index]);
-        }
-    }
 };
 
 Interpreter.prototype.instructionLOAD_ARRAY_REFERENCE = function (id) {

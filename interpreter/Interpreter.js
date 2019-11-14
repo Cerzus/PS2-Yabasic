@@ -346,9 +346,7 @@ class Interpreter {
     }
 
     requestFrame(milliseconds) {
-        this.runTimeoutId = setTimeout(() => {
-            this.executeFrame();
-        }, milliseconds);
+        this.runTimeoutId = setTimeout(this.executeFrame.bind(this), milliseconds);
     }
 
     executeFrame() {
@@ -369,11 +367,20 @@ class Interpreter {
                     const instruction = this.instructions[this.programCounter++]; // cannot cache instructions, because COMPILE might add more
 
                     switch (instruction.type) {
+                        case 'instructionNUMBER':
+                            this.instructionNUMBER(instruction.arguments[0]);
+                            break;
                         case 'instructionLOAD_NUMERIC_VARIABLE':
                             this.instructionLOAD_NUMERIC_VARIABLE(instruction.arguments[0]);
                             break;
                         case 'instructionSTORE_NUMERIC_VARIABLE':
                             this.instructionSTORE_NUMERIC_VARIABLE(instruction.arguments[0]);
+                            break;
+                        case 'instructionCALL_FUNCTION_OR_ARRAY':
+                            this.instructionCALL_FUNCTION_OR_ARRAY(instruction.arguments[0], instruction.arguments[1]);
+                            break;
+                        case 'instructionSTORE_ARRAY_ELEMENT':
+                            this.instructionSTORE_ARRAY_ELEMENT(instruction.arguments[0], instruction.arguments[1]);
                             break;
                         default:
                             this[instruction.type](...instruction.arguments);
