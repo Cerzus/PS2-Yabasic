@@ -55,30 +55,6 @@ class GraphicsScreen {
         this.gl.blendFunc(this.gl.SRC_ALPHA, this.gl.ONE_MINUS_SRC_ALPHA);
 
         this.maxCoordsBeforeSend = 5000;
-
-        var canvas = document.createElement('canvas');
-        canvas.width = 256;
-        canvas.height = 256;
-
-        var context = canvas.getContext('2d');
-        context.font = '16px Lucida Console';
-        context.textBaseline = 'top';
-        context.fillStyle = 'white';
-
-        for (let i = 0; i < 16; i++) {
-            if (i & 0x6) {
-                for (let j = 0; j < 16; j++) {
-                    context.fillText(String.fromCharCode(i * 16 + j), 16 * j + 1, 16 * i);
-                }
-            }
-        }
-
-        this.textTexture = this.gl.createTexture();
-        this.gl.activeTexture(this.gl.TEXTURE0);
-        this.gl.bindTexture(this.gl.TEXTURE_2D, this.textTexture);
-        this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_MIN_FILTER, this.gl.NEAREST);
-        this.gl.pixelStorei(this.gl.UNPACK_FLIP_Y_WEBGL, false);
-        this.gl.texImage2D(this.gl.TEXTURE_2D, 0, this.gl.ALPHA, this.gl.ALPHA, this.gl.UNSIGNED_BYTE, canvas);
     }
 
     getDomElement() {
@@ -677,6 +653,29 @@ class GraphicsScreen {
         program.texCoords = gl.getAttribLocation(program, 'texCoords');
         gl.enableVertexAttribArray(program.texCoords);
 
+        const canvas = document.createElement('canvas');
+        canvas.width = 256;
+        canvas.height = 256;
+
+        const context = canvas.getContext('2d');
+        context.font = '16px Lucida Console';
+        context.textBaseline = 'top';
+        context.fillStyle = 'white';
+
+        for (let i = 0; i < 16; i++) {
+            if (i & 0x6) {
+                for (let j = 0; j < 16; j++) {
+                    context.fillText(String.fromCharCode(i * 16 + j), 16 * j + 1, 16 * i);
+                }
+            }
+        }
+
+        gl.activeTexture(gl.TEXTURE0);
+        gl.bindTexture(gl.TEXTURE_2D, gl.createTexture());
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+        gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.ALPHA, gl.ALPHA, gl.UNSIGNED_BYTE, canvas);
+
         return program;
     }
 
@@ -730,7 +729,8 @@ class GraphicsScreen {
         this.gl.pixelStorei(this.gl.UNPACK_FLIP_Y_WEBGL, true);
 
         this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_WRAP_S, this.gl.CLAMP_TO_EDGE);
-        this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_WRAP_T, this.gl.CLAMP_TO_EDGE); this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_MIN_FILTER, this.gl.NEAREST);
+        this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_WRAP_T, this.gl.CLAMP_TO_EDGE);
+        this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_MIN_FILTER, this.gl.NEAREST);
 
         this.gl.uniform1i(program.sampler, 1);
 
@@ -806,12 +806,12 @@ class GraphicsScreen {
         this.tempBufferContext.drawImage(this.frontBufferContext.canvas, 0, 0);
         this.frontBufferContext.drawImage(this.gl.canvas, 0, 0);
 
-        this.gl.activeTexture(this.gl.TEXTURE1);
-        this.gl.bindTexture(this.gl.TEXTURE_2D, this.bufferSwapTexture);
+        // this.gl.activeTexture(this.gl.TEXTURE1);
+        // this.gl.bindTexture(this.gl.TEXTURE_2D, this.bufferSwapTexture);
         this.gl.texImage2D(this.gl.TEXTURE_2D, 0, this.gl.RGBA, this.gl.RGBA, this.gl.UNSIGNED_BYTE, this.tempBufferContext.canvas);
         // this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_MIN_FILTER, this.gl.NEAREST);
 
-        this.gl.uniform1i(this.bufferSwapProgram.samplerUniform, 1);
+        // this.gl.uniform1i(this.bufferSwapProgram.samplerUniform, 1);
 
         this.useBufferSwapProgram(
             [-1, 1, 1, 1, -1, -1, 1, -1],
