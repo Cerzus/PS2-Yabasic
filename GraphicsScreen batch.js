@@ -5,32 +5,21 @@ class GraphicsScreen {
         this.width = width;
         this.height = height;
 
-        const buffer1Canvas = document.createElement('canvas');
-        buffer1Canvas.width = this.width;
-        buffer1Canvas.height = this.height;
-
-        this. buffer0Canvas = document.createElement('canvas');
-        this.buffer0Canvas.style.position = 'absolute';
-        this.buffer0Canvas.style.top = 0;
-        this.buffer0Canvas.style.left = 0;
-        this.buffer0Canvas.width = this.width;
-        this.buffer0Canvas.height = this.height;
-
-        this.domElement = document.createElement('div');
-        this.domElement.style.position = 'relative';
-        this.domElement.append(buffer1Canvas);
-        this.domElement.append(this.buffer0Canvas);
+        this.canvas = document.createElement('canvas');
+        this.canvas.width = this.width;
+        this.canvas.height = this.height;
+        this.context = this.canvas.getContext('2d');
 
         this.buffers = [
-            this.createBuffer(this.buffer0Canvas),
-            this.createBuffer(buffer1Canvas),
+            this.createBuffer(),
+            this.createBuffer(),
         ];
 
         this.maxCoordsBeforeSend = 5000;
     }
 
     getDomElement() {
-        return this.domElement;
+        return this.canvas;
     }
 
     reset(r, g, b) {
@@ -38,11 +27,11 @@ class GraphicsScreen {
         this.dispBuf = 0;
 
         for (let buffer of this.buffers) {
-            buffer.clearColor(r, g, b, 1);
-            buffer.clear(buffer.COLOR_BUFFER_BIT);
+            buffer.gl.clearColor(r, g, b, 1);
+            buffer.gl.clear(buffer.gl.COLOR_BUFFER_BIT);
         }
 
-        this.gl = this.buffers[this.drawBuf];
+        this.gl = this.buffers[this.drawBuf].gl;
 
         this.coords = [];
         this.colors = [];
@@ -51,6 +40,7 @@ class GraphicsScreen {
 
     update() {
         this.sendToGraphicsCard();
+        this.context.drawImage(this.buffers[this.drawBuf].canvas, 0, 0);
     }
 
     clearWindow(r, g, b) {
@@ -65,14 +55,13 @@ class GraphicsScreen {
     setDrawBuf(buffer) {
         if (buffer !== this.drawBuf) {
             this.sendToGraphicsCard();
-            this.gl = this.buffers[buffer];
+            this.gl = this.buffers[buffer].gl;
             this.drawBuf = buffer;
         }
     }
 
     setDispBuf(buffer) {
         if (buffer !== this.dispBuf) {
-            this.buffer0Canvas.style.visibility = buffer ? 'hidden':'visible';
             this.dispBuf = buffer;
         }
     }
@@ -587,7 +576,11 @@ class GraphicsScreen {
         }
     }
 
-    createBuffer(canvas) {
+    createBuffer() {
+        const canvas = document.createElement('canvas');
+        canvas.width = this.width;
+        canvas.height = this.height;
+
         const gl = canvas.getContext('webgl', {
             antialias: false,
             preserveDrawingBuffer: true,
@@ -601,7 +594,7 @@ class GraphicsScreen {
         gl.textTexture = this.createTextTexture(gl);
         gl.program = this.createProgram(gl);
 
-        return gl;
+        return { canvas, gl };
     }
 
     createTextTexture(gl) {
@@ -680,13 +673,13 @@ class GraphicsScreen {
         gl.coordsBuffer = gl.createBuffer();
         gl.bindBuffer(gl.ARRAY_BUFFER, gl.coordsBuffer);
         gl.vertexAttribPointer(gl.coords, 2, gl.FLOAT, false, 0, 0);
-        
+
         gl.color = gl.getAttribLocation(program, 'color');
         gl.enableVertexAttribArray(gl.color);
         gl.colorBuffer = gl.createBuffer();
         gl.bindBuffer(gl.ARRAY_BUFFER, gl.colorBuffer);
         gl.vertexAttribPointer(gl.color, 3, gl.FLOAT, false, 0, 0);
-        
+
         gl.texCoords = gl.getAttribLocation(program, 'texCoords');
         gl.enableVertexAttribArray(gl.texCoords);
         gl.texCoordsBuffer = gl.createBuffer();
