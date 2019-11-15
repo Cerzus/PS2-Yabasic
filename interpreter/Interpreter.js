@@ -308,7 +308,7 @@ class Interpreter {
             this.streamError = { id: 0, message: [''] };
             this.streams = new Array(16).fill(false);
 
-            this.graphicsScreen.reset(...this.colors[0]); // need to do this here, because the graphics screen might be shown before being opened (.e.g on a setrgb runtime error)
+            this.graphicsScreen.reset(...this.colors[0]); // need to do this here because the graphics screen might be shown before being opened (e.g. on a setrgb runtime error)
 
             this.dataIndex = 0;
             this.valuesStack = [];

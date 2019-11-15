@@ -98,29 +98,31 @@ Interpreter.prototype.instructionINKEY$ = function (hasTimeout) {
     }
 };
 
-Interpreter.prototype.instructionPRINT = function (using) {
+Interpreter.prototype.instructionPRINT = function () {
     this.hideTextScreen = false;
 
-    if (using) {
-        const format = this.popString();
-        const number = this.popNumber();
+    const value = this.popStringOrNumberWithType();
+
+    if (value.type === 'String') {
+        this.textScreen.print(value.value);
+    } else if (value.type === 'Number') {
         const prefix = this.previousPrintType === 'Number' ? ' ' : '';
-        this.textScreen.print(prefix + this.numberToString(number, format));
-        this.previousPrintType = 'Number';
-    } else {
-        const value = this.popStringOrNumberWithType();
-
-        if (value.type === 'String') {
-            this.textScreen.print(value.value);
-        } else if (value.type === 'Number') {
-            const prefix = this.previousPrintType === 'Number' ? ' ' : '';
-            const number = value.value;
-            const format = number >= -this.EXP2E31 && number < this.EXP2E31 && Math.abs(number % 1) === 0 ? '%.10g' : '%.6g';
-            this.textScreen.print(prefix + this.formatter.toString(number, format));
-        }
-
-        this.previousPrintType = value.type;
+        const number = value.value;
+        const format = number >= -this.EXP2E31 && number < this.EXP2E31 && Math.abs(number % 1) === 0 ? '%.10g' : '%.6g';
+        this.textScreen.print(prefix + this.formatter.toString(number, format));
     }
+
+    this.previousPrintType = value.type;
+};
+
+Interpreter.prototype.instructionPRINT_USING = function () {
+    this.hideTextScreen = false;
+
+    const format = this.popString();
+    const number = this.popNumber();
+    const prefix = this.previousPrintType === 'Number' ? ' ' : '';
+    this.textScreen.print(prefix + this.numberToString(number, format));
+    this.previousPrintType = 'Number';
 };
 
 Interpreter.prototype.instructionINPUT = function (splitOnSpaces, isString) {

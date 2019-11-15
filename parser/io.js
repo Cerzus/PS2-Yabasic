@@ -38,21 +38,21 @@ Parser.prototype.evaluatePRINT_STATEMENT = function (node) {
         this.evaluateNode(item.expression);
         if (item.using !== null) {
             this.evaluateNode(item.using);
-            this.addInstruction(item.expression.line, 'PRINT', true);
+            this.addInstruction(item.expression.line, 'PRINT_USING');
         } else {
-            this.addInstruction(item.expression.line, 'PRINT', false);
+            this.addInstruction(item.expression.line, 'PRINT');
         }
     }
 
     switch (node.suffix) {
-        case null: {
+        case null:
             this.addInstruction(node.line, 'STRING', '\n');
             this.addInstruction(node.line, 'PRINT');
-        } break;
-        case ',': {
+            break;
+        case ',':
             this.addInstruction(node.line, 'STRING', '\t');
             this.addInstruction(node.line, 'PRINT');
-        } break;
+            break;
     }
 
     if ('stream' in node) {
