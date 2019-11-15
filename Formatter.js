@@ -37,14 +37,14 @@ class Formatter {
         string = string.padStart(format.length, ' ');
 
         if (Math.abs(value) === this.EXP2E31 - 1) {
-            string = string.replace(/0+/, '');
+            return string.replace(/0+/, '');
         }
 
         return string;
     }
 
     toCString(number, format) {
-        if (format[0] !== '%') error();
+        if (format[0] !== '%') return null;
 
         let i = 1;
 
@@ -89,7 +89,7 @@ class Formatter {
             minusFlag |= format[i] === '-';
             plusFlag |= format[i] === '+';
             i++;
-            if (!/\d/.test(format[i])) error();
+            if (!/\d/.test(format[i])) return null;
         }
         zeroFlag |= format[i] === '0';
         let width = '';
@@ -97,7 +97,7 @@ class Formatter {
             width += format[i];
             i++
         }
-        if (whitespaceFound && !width) error();
+        if (whitespaceFound && !width) return null;
 
         // period
         let period = false;
@@ -117,7 +117,7 @@ class Formatter {
             minusFlag |= format[i] === '-';
             plusFlag |= format[i] === '+';
             i++;
-            if (!/\d/.test(format[i])) error();
+            if (!/\d/.test(format[i])) return null;
             zeroFlag |= format[i] === '0';
             precisionCouldDetermineWidth = true;
         }
@@ -126,18 +126,14 @@ class Formatter {
             if (precision !== 0) precision += format[i];
             i++;
         }
-        if (whitespaceFound && !precision) error();
+        if (whitespaceFound && !precision) return null;
 
         // the format must contain at least either the width field or the precision field and may not contain a period without either
-        if (!period && width && precision || !width && !precision) error();
+        if (!period && width && precision || !width && !precision) return null;
 
         // type field
-        if (!/[eEfgG]/.test(format[i]) || i !== format.length - 1) error();
+        if (!/[eEfgG]/.test(format[i]) || i !== format.length - 1) return null;
         let type = format[i];
-
-        function error() {
-            throw `'${format}' is not a valid format`;
-        }
 
         // if there are any other whitespace characters than spaces in the format string, for some reason
         // we want the part of the format string from the first occurance of such a character till the end
@@ -154,71 +150,30 @@ class Formatter {
             precision = precision ? parseInt(precision) : (period ? 0 : 6);
         }
 
-        let string;
-
         const absoluteNumber = Math.abs(number);
 
         if (absoluteNumber === Number.POSITIVE_INFINITY) {
-            string = absoluteNumber.toString().replace(/inity$/, '');
-        }
-        else {
+            var string = absoluteNumber.toString().replace(/inity$/, '');
+        } else {
             const log10 = 1 + (absoluteNumber ? Math.floor(Math.log10(absoluteNumber)) : 0);
 
             if (type === 'e' || type === 'E') {
-                numberToExponential(precision, type === 'E');
+                var string = this.numberToExponential(absoluteNumber, precision, hashFlag, type === 'E');
             } else if (type === 'f') {
-                numberToFixed(precision);
+                var string = this.numberToFixed(absoluteNumber, precision, hashFlag, log10);
             } else if (type === 'g' || type === 'G') {
-                if (precision >= log10 - 0 /* test 11111 using "%.5g"*/ && log10 > -4) {
-                    numberToFixed(Math.max(precision - log10, 1 - log10));
+                if (log10 > -4 && log10 <= precision + 0 /* test ?11111 using "%.5g"*/) {
+                    var string = this.numberToFixed(absoluteNumber, Math.max(1, precision) - log10, hashFlag, log10);
+
                     if (!hashFlag && string.indexOf('.') >= 0) {
                         string = string.replace(/\.?0*$/, '');
                     }
                 } else {
-                    numberToExponential(Math.max(0, precision - 1), type === 'G');
+                    var string = this.numberToExponential(absoluteNumber, Math.max(0, precision - 1), hashFlag, type === 'G');
+
                     if (!hashFlag && string.indexOf('.') >= 0) {
                         string = string.replace(/\.?0*e/, 'e');
                     }
-                }
-
-            }
-
-            function numberToExponential(precision, useCapitalE) {
-                string = absoluteNumber.toExponential(Math.min(precision, 100));
-
-                string = string.replace('e', '0'.repeat(Math.max(0, precision - 100)) + 'e');
-
-                if (hashFlag && string.indexOf('.') === -1) {
-                    string = string.replace('e', '.e');
-                }
-
-                if (useCapitalE) {
-                    string = string.replace('e', 'E');
-                }
-            }
-
-            function numberToFixed(precision) {
-                if (absoluteNumber === 0) {
-                    string = '0';
-                    string += precision || hashFlag ? '.' : '';
-                    string = string.padEnd(precision + (hashFlag ? 2 : 1), 0);
-                } else if (precision >= 0 && log10 >= 1 && precision + log10 <= 100) {
-                    string = absoluteNumber.toPrecision(precision + log10);
-
-                    string += hashFlag && string.indexOf('.') === -1 ? '.' : '';
-                }
-                // custom toPrecision, because toPrecision can only handle from 1 to 100
-                else {
-                    const significantDigits = Math.round(absoluteNumber * Math.pow(10, Math.min(precision + log10, 15) - log10)).toString().replace(/0*$/, '');
-                    const decimalPointIndex = Math.min(Math.max(0, log10), significantDigits.length);
-                    const integerPart = significantDigits.substring(0, decimalPointIndex).padEnd(log10, 0) || '0';
-                    let fractionalPart = significantDigits.substring(decimalPointIndex).padStart(significantDigits.length - log10, 0);
-
-                    fractionalPart = fractionalPart.padEnd(precision, 0);
-
-                    fractionalPart = (fractionalPart || hashFlag ? '.' : '') + fractionalPart.substring(0, precision);
-
-                    string = integerPart + fractionalPart;
                 }
             }
         }
@@ -227,14 +182,57 @@ class Formatter {
         string = string.replace(/([-+])(\d)$/, '$10$2');
 
         const prefix = number < 0 ? '-' : (plusFlag ? '+' : (spaceFlag ? ' ' : ''));
+
         if (minusFlag) {
-            string = (prefix + string).padEnd(width, ' ');
-        } else if (zeroFlag) {
-            string = prefix + string.padStart(width - prefix.length, 0);
-        } else {
-            string = (prefix + string).padStart(width, ' ');
+            return (prefix + string).padEnd(width, ' ');
+        }
+
+        if (zeroFlag) {
+            return prefix + string.padStart(width - prefix.length, 0);
+        }
+
+        return (prefix + string).padStart(width, ' ');
+    }
+
+    numberToExponential(number, precision, forcePeriod, useCapitalE) {
+        let string = number.toExponential(Math.min(precision, 100));
+
+        string = string.replace('e', '0'.repeat(Math.max(0, precision - 100)) + 'e');
+
+        if (forcePeriod && string.indexOf('.') === -1) {
+            string = string.replace('e', '.e');
+        }
+
+        if (useCapitalE) {
+            return string.replace('e', 'E');
         }
 
         return string;
+    }
+
+    numberToFixed(number, precision, forcePeriod, log10) {
+        if (number === 0) {
+            let string = '0' + (precision || forcePeriod ? '.' : '');
+
+            return string.padEnd(precision + (forcePeriod ? 2 : 1), 0);
+        }
+
+        if (precision >= 0 && log10 >= 1 && precision + log10 <= 100) {
+            let string = number.toPrecision(precision + log10);
+
+            return string + (forcePeriod && string.indexOf('.') === -1 ? '.' : '');
+        }
+
+        // custom toPrecision, because toPrecision can only handle from 1 to 100
+        const significantDigits = Math.round(number * Math.pow(10, Math.min(precision + log10, 15) - log10)).toString().replace(/0*$/, '');
+        const decimalPointIndex = Math.min(Math.max(0, log10), significantDigits.length);
+        const integerPart = significantDigits.substring(0, decimalPointIndex).padEnd(log10, 0) || '0';
+        let fractionalPart = significantDigits.substring(decimalPointIndex).padStart(significantDigits.length - log10, 0);
+
+        fractionalPart = fractionalPart.padEnd(precision, 0);
+
+        fractionalPart = (fractionalPart || forcePeriod ? '.' : '') + fractionalPart.substring(0, precision);
+
+        return integerPart + fractionalPart;
     }
 }

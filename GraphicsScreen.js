@@ -279,6 +279,7 @@ class GraphicsScreen {
         }
     }
 
+    // TODO: draw correctly
     line(x1, y1, x2, y2, color) {
         if (y1 === y2) {
             this.rectangle(x1, y1 - 0.5, x2, y1 + 0.5, color, true);

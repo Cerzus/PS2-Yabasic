@@ -5,6 +5,11 @@ interface:
 
 both versions:
     check usage of ~~ and numberToInt everywhere
+    draw lines correctly
+    check debouncing for keyboard: 0?inkey$(.1):goto 0
+    type checking for WAIT?
+    check number formatting
+    write tests
     correct line number in errors (especially for COMPILE)
     a()=a() error
     text a(),a(),a$(),a$() error

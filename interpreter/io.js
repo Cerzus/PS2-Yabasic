@@ -105,7 +105,7 @@ Interpreter.prototype.instructionPRINT = function (using) {
         const format = this.popString();
         const number = this.popNumber();
         const prefix = this.previousPrintType === 'Number' ? ' ' : '';
-        this.textScreen.print(prefix + this.formatter.toString(number, format));
+        this.textScreen.print(prefix + this.numberToString(number, format));
         this.previousPrintType = 'Number';
     } else {
         const value = this.popStringOrNumberWithType();

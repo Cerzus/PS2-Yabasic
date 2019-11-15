@@ -130,6 +130,7 @@ Interpreter.prototype.instructionDIM = function (id, numDimensions) {
     if (numDimensions > 10) {
         this.throwError('ArrayHasMoreThan10Dimensions');
     }
+
     // if the array already exists, the number of dimensions must be the the same and the dimensions cannot shrink
     if (array !== undefined) {
         if (numDimensions !== array.dimensions.length) {

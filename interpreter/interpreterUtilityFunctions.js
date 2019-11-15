@@ -172,3 +172,13 @@ Interpreter.prototype.numberToInt = function (number) {
     // ~~? 2.64: TODO, 2.66: TODO 
     return ~~Math.min(Math.max(-this.EXP2E31, number), this.EXP2E31 - 1);
 };
+
+Interpreter.prototype.numberToString = function (number, format) {
+    const string = this.formatter.toString(number, format);
+
+    if (string === null) {
+        this.throwError('NotValidFormat', format);
+    }
+
+    return string;
+};

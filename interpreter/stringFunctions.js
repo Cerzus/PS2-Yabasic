@@ -157,7 +157,7 @@ Interpreter.prototype.instructionSTR$_1 = function () {
 Interpreter.prototype.instructionSTR$_2 = function () {
     const format = this.popStringOrNumber();
     const number = this.popStringOrNumber();
-    this.pushString(this.formatter.toString(number, format));
+    this.pushString(this.numberToString(number, format));
 };
 
 Interpreter.prototype.instructionCHR$ = function () {
