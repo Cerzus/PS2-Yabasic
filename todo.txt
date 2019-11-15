@@ -4,6 +4,8 @@ interface:
     version pick option
 
 both versions:
+    stop wasting cpu when doing nothing (INKEY, INPUT, WAIT, BELL)
+    do something about preserveDrawingBuffer: true ?
     check usage of ~~ and numberToInt everywhere
     draw lines correctly
     check debouncing for keyboard: 0?inkey$(.1):goto 0

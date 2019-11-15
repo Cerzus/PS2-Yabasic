@@ -108,7 +108,7 @@ class Interpreter {
         div.append(this.graphicsScreen.getDomElement());
         div.append(this.textScreen.getDomElement());
         div.append(this.messageDiv);
-        // div.append(this.overlayDiv);
+        div.append(this.overlayDiv);
         const screenDiv = div;
 
         // dualshock 2
