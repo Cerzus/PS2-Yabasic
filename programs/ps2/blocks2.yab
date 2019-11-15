@@ -1,0 +1,147 @@
+open window 640,512
+gosub flipscreen
+
+level=0
+pxpos=0
+pypos=0
+width=3
+height=3
+shipw=0.6
+shiph=0.4
+blocks=height*width*2
+dim blocks(blocks,7)
+for b=1 to blocks/2
+ blocks(b,1)=1
+ blocks(b,2)=int(ran(width))-width/2+0.5
+ blocks(b,3)=int(ran(height))-height/2+0.5
+ blocks(b,4)=10-b*10/blocks
+ red=255*cos(level)
+ if abs(red)>127.5 red=sig(red)*127.5
+ green=255*cos(level+pi/3)
+ if abs(green)>127.5 green=sig(green)*127.5
+ blue=255*cos(level-pi/3)
+ if abs(blue)>127.5 blue=sig(blue)*127.5
+ blocks(b,5)=127.5+red
+ blocks(b,6)=127.5-green
+ blocks(b,7)=127.5-blue
+next
+
+label gameloop
+ level=level+.002
+
+ cxpos=pxpos
+ cypos=pypos
+ czpos=0
+ if abs(cxpos)>width/2-0.1 cxpos=sig(cxpos)*(width/2-0.1)
+ if abs(cypos)>height/2-0.1 cypos=sig(cypos)*(height/2-0.1)
+
+ for b=1 to blocks
+  blocks(b,4)=blocks(b,4)-0.05
+  a=0
+  if czpos=0 a=0.2
+  if blocks(b,4)<a blocks(b,1)=0
+ next
+ if blocks(1,4)<10-10/blocks then
+  for b=blocks to 2 step -1
+   for c=1 to 7
+    blocks(b,c)=blocks(b-1,c)
+   next
+  next
+  blocks(1,1)=1
+  blocks(1,2)=int(ran(width))-width/2+0.5
+  blocks(1,3)=int(ran(height))-height/2+0.5
+  blocks(1,4)=10
+  red=255*cos(level+ran(0.5))
+  if abs(red)>127.5 red=sig(red)*127.5
+  green=255*cos(level+ran(0.5)+pi/3)
+  if abs(green)>127.5 green=sig(green)*127.5
+  blue=255*cos(level+ran(0.5)-pi/3)
+  if abs(blue)>127.5 blue=sig(blue)*127.5
+  blocks(1,5)=127.5+red
+  blocks(1,6)=127.5-green
+  blocks(1,7)=127.5-blue
+ fi
+
+ gosub drawscreen
+ k=peek("port1")
+ if and(k,16)>0 pypos=pypos-0.1
+ if and(k,32)>0 pxpos=pxpos+0.1
+ if and(k,64)>0 pypos=pypos+0.1
+ if and(k,128)>0 pxpos=pxpos-0.1
+ if abs(pxpos)>width/2-shipw/2 pxpos=sig(pxpos)*(width/2-shipw/2)
+ if abs(pypos)>height/2-shiph/2 pypos=sig(pypos)*(height/2-shiph/2)
+goto gameloop
+
+label drawscreen
+ clear window
+ setrgb 1,0,0,0
+ setrgb 2,0,0,0
+ for l=0 to 3
+  a=sig(l-1.5)
+  b=sig(mod(l,2)-0.5)
+  x=a*width/2-cxpos
+  y=b*height/2-cypos
+  d=x/y
+  if abs(x)>abs(y) then
+   X=a*300
+   Y=X/d
+  else
+   Y=b*300
+   X=Y*d
+  fi
+  red=127.5+255*cos(level)
+  green=127.5-255*cos(level+pi/3)
+  blue=127.5-255*cos(level-pi/3)
+  c=300*sqrt(x^2+y^2)/sqrt(X^2+Y^2)+1
+  setrgb 3,red/c,green/c,blue/c
+  gtriangle 320,256 to 320+X-a*9/abs(y),256+Y+b*9/abs(x) to 320+X,256+Y
+  gtriangle 320,256 to 320+X+a*9/abs(y),256+Y-b*9/abs(x) to 320+X,256+Y
+ next
+
+ zpos=czpos
+
+ for b=1 to blocks
+  object=blocks(b,1)
+  x=blocks(b,2)
+  y=blocks(b,3)
+  c=sig(cxpos-x+0.001)/2
+  d=sig(cypos-y+0.001)/2
+  za=blocks(b,4)+zpos
+  red=blocks(b,5)
+  green=blocks(b,6)
+  blue=blocks(b,7)
+  zb=za-0.2
+  xaa=320+64*(x+c-cxpos)/za
+  xba=320+64*(x-c-cxpos)/za
+  xab=320+64*(x+c-cxpos)/zb
+  xbb=320+64*(x-c-cxpos)/zb
+  yaa=256+64*(y+d-cypos)/za
+  yba=256+64*(y-d-cypos)/za
+  yab=256+64*(y+d-cypos)/zb
+  ybb=256+64*(y-d-cypos)/zb
+
+  if object=1 then
+   setrgb 1,red/(za+1),green/(za+1),blue/(za+1)
+   setrgb 2,red/(za+1),green/(za+1),blue/(za+1)
+   setrgb 3,red/(zb+1),green/(zb+1),blue/(zb+1)
+   gtriangle xaa,yaa to xba,yaa to xab,yab
+   setrgb 1,red/(zb+1),green/(zb+1),blue/(zb+1)
+   gtriangle xbb,yab to xba,yaa to xab,yab
+
+   setrgb 1,red/(za+1),green/(za+1),blue/(za+1)
+   gtriangle xaa,yaa to xaa,yba to xab,yab
+   setrgb 1,red/(zb+1),green/(zb+1),blue/(zb+1)
+   gtriangle xab,ybb to xaa,yba to xab,yab
+
+   fill rect xab,yab,xbb,ybb
+  fi
+ next
+
+ setrgb 1,15,15,15
+ fill rect 0,0,64,512
+ fill rect 576,0,640,512
+label flipscreen
+setdrawbuf draw
+draw=1-draw
+setdispbuf draw
+return
